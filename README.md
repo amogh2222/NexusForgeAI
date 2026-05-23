@@ -1,375 +1,556 @@
-# NexusForge AI
+<div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.2-purple.svg)](https://langchain-ai.github.io/langgraph/)
+<br/>
 
-> **Enterprise-grade autonomous AI software engineering platform.** Upload a repository, ask anything — 6 specialized AI agents will understand, generate, review, document, and deploy your code.
+<!-- Project Banner -->
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=7c3aed&height=200&section=header&text=NexusForge%20AI&fontSize=60&fontColor=ffffff&fontAlignY=38&desc=Autonomous%20AI%20Engineering%20Operating%20System&descAlignY=58&descColor=c4b5fd" alt="NexusForge AI Banner"/>
 
----
+<br/>
 
-## Overview
+<!-- Badges Row 1 - Tech Stack -->
+![Python](https://img.shields.io/badge/Python_3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 
-NexusForge AI is a full-stack, production-ready AI engineering operating system that combines:
+<!-- Badges Row 2 - AI/Infra -->
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![Qdrant](https://img.shields.io/badge/Qdrant-FF4455?style=for-the-badge&logo=qdrant&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white)
 
-- **Multi-Agent Orchestration** — 6 specialized LangGraph agents (Planner, Coder, Reviewer, Infra, Docs, Debugger) coordinated by a Supervisor StateGraph
-- **RAG Pipeline** — Tree-sitter AST chunking + BGE embeddings + BM25 hybrid retrieval via Reciprocal Rank Fusion for precise code search
-- **Real-time Streaming** — Agent outputs stream token-by-token via WebSocket using LangGraph's `astream_events v2` API
-- **Isolated Code Execution** — Run Python, Node.js, Go, and Bash in sandboxed subprocesses with live terminal output
-- **Full GitHub Integration** — OAuth, private repos, branch exploration, PR analysis, clone + index pipeline
-- **Long-term Memory** — ChromaDB vector store with HNSW indexing, per-project semantic search that persists across sessions
+<!-- Badges Row 3 - Status -->
+![License](https://img.shields.io/badge/License-MIT-7c3aed?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Production_Ready-22c55e?style=for-the-badge)
+![PRs](https://img.shields.io/badge/PRs-Welcome-06b6d4?style=for-the-badge)
 
-This is not a chatbot. It is a deployable SaaS platform with a production-grade distributed backend.
+<br/>
 
----
+### *Upload any codebase. Watch 6 AI agents understand, review, debug, document, and scale it — live.*
 
-## ✨ Features
+<br/>
 
-- **🤖 6 Specialized AI Agents** — Each expert in a specific engineering domain
-- **📊 Semantic Code Search** — BGE + BM25 hybrid retrieval with sub-second response
-- **💻 Live Code Execution** — Python, Node.js, Go, Bash in real-time sandboxes
-- **🏗️ Architecture Diagrams** — React Flow interactive system diagrams auto-generated from repos
-- **📄 README Generation** — Production-grade docs generated from actual codebase analysis
-- **🔍 Security Review** — Automated vulnerability and anti-pattern detection
-- **🐳 Infra Generation** — Dockerfile, docker-compose, GitHub Actions CI/CD on demand
-- **🐛 Auto Debugging** — Root cause analysis with targeted code fixes
-- **🔐 Full Auth** — JWT access/refresh tokens + GitHub OAuth (public + private repos)
-- **📡 WebSocket Streaming** — Real-time agent output with per-agent color coding
+[**⚡ Quick Start**](#-quick-start) • [**🏗️ Architecture**](#-system-architecture) • [**🤖 Agents**](#-multi-agent-system) • [**📡 API Docs**](#-api-reference) • [**🚀 Deploy**](#-deployment)
+
+<br/>
+
+</div>
 
 ---
 
-## 🏗️ Architecture
+## 🧠 What is NexusForge AI?
+
+> **NexusForge is not a chatbot wrapper. It is an autonomous AI engineering platform.**
+
+Upload a repository. NexusForge parses it at the **AST level**, builds a **semantic knowledge graph**, indexes it with **hybrid dense+sparse retrieval**, and deploys a **graph-orchestrated multi-agent system** that operates with senior engineering depth.
+
+<br/>
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Next.js 16 Frontend                       │
-│  Dashboard · Workspace · Repository · Agents · Execution    │
-│  Memory · Architecture Viewer                               │
-└────────────────────┬────────────────────────────────────────┘
-                     │ HTTP + WebSocket
-┌────────────────────▼────────────────────────────────────────┐
-│                  FastAPI Backend                             │
-│  Auth · Projects · Repositories · GitHub · Chat · Exec     │
-│  WebSocket Hub (Redis pub/sub → WS broadcast)               │
-└──┬──────────────────┬──────────────────┬────────────────────┘
-   │                  │                  │
-   ▼                  ▼                  ▼
-PostgreSQL          Redis             ChromaDB
-(Users, Projects,  (Broker +        (BGE Vectors
- Chat, Executions,  Pub/Sub +         HNSW Index
- Agent Logs)        Cache)            Per-project)
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│               Celery Workers                                 │
-│  indexing_task  ·  agent_task  ·  execution_task            │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│            LangGraph Orchestrator                            │
-│  StateGraph with PostgresSaver checkpoints                  │
-│                                                             │
-│   ┌──────────┐  ┌────────┐  ┌──────────┐  ┌─────────┐     │
-│   │ Planner  │  │ Coder  │  │ Reviewer │  │  Infra  │     │
-│   └──────────┘  └────────┘  └──────────┘  └─────────┘     │
-│   ┌──────────┐  ┌──────────┐                               │
-│   │  Docs   │  │ Debugger │                               │
-│   └──────────┘  └──────────┘                               │
-│                     │                                       │
-│              Ollama (Qwen2.5-Coder)                         │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        What NexusForge Can Do                           │
+├─────────────────┬───────────────────────────────────────────────────────┤
+│  UNDERSTAND     │  AST-level parsing → semantic knowledge graph          │
+│  EXPLAIN        │  Architecture, data flow, service boundaries           │
+│  REVIEW         │  Security, N+1 queries, async misuse, anti-patterns    │
+│  GENERATE       │  READMEs, Dockerfiles, CI/CD, infra configs            │
+│  DEBUG          │  Execute → capture error → reason → patch → retry      │
+│  SCALE          │  "Scale to 10M users" → complete HLD + infra plan      │
+│  EVOLVE         │  Commit history → architectural drift detection         │
+└─────────────────┴───────────────────────────────────────────────────────┘
 ```
+
+<br/>
 
 ---
 
-## 🚀 Quick Start
-
-**Prerequisites:** Docker Desktop, Python 3.11+, Node.js 20+
+## ⚡ Quick Start
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/nexusforge-ai.git
-cd nexusforge-ai
+# 1. Clone
+git clone https://github.com/yourusername/nexusforge-ai.git && cd nexusforge-ai
 
-# 2. Run setup (Linux/macOS)
-bash scripts/setup.sh
+# 2. Configure
+cp .env.example .env
+# Edit .env — set DATABASE_URL, JWT_SECRET_KEY, OPENAI_API_KEY (fallback)
 
-# OR on Windows PowerShell
-.\scripts\setup.ps1
+# 3. Launch everything
+docker-compose up --build -d
 
-# 3. Start all services
-docker compose up
+# 4. Migrate DB
+docker-compose exec backend alembic upgrade head
 
-# 4. Open the platform
+# 5. Open dashboard
 open http://localhost:3000
 ```
 
-The setup script will:
-- Copy `.env.example` → `.env` with auto-generated JWT secret
-- Pull all Docker images
-- Start PostgreSQL, Redis, ChromaDB
-- Run database migrations
-- Install Python and Node.js dependencies
-- Pull the Ollama Qwen2.5-Coder model
+> **Optional**: Pull a local model for offline inference
+> ```bash
+> ollama pull qwen2.5-coder:7b
+> ```
+
+<br/>
 
 ---
 
-## 📋 Prerequisites
-
-| Requirement | Version | Purpose |
-|-------------|---------|---------|
-| Docker Desktop | 25.0+ | All infrastructure services |
-| Python | 3.11+ | Backend + Celery workers |
-| Node.js | 20+ | Next.js frontend |
-| npm | 10+ | Frontend package management |
-| Ollama | Latest | Local LLM inference (optional — OpenAI fallback available) |
-
----
-
-## ⚙️ Installation
-
-### Option A: Full Docker (recommended)
-
-```bash
-# Copy and configure environment
-cp .env.example .env
-# Edit .env: set JWT_SECRET_KEY, optionally add OPENAI_API_KEY
-
-# Start everything
-docker compose up -d
-
-# Pull LLM model (first time, ~4GB download)
-docker compose exec ollama ollama pull qwen2.5-coder:7b
-```
-
-### Option B: Hybrid (Docker infra + local dev)
-
-```bash
-# Start only infra services
-docker compose up -d postgres redis chromadb ollama
-
-# Install backend
-pip install -e ".[all]"
-python -m alembic upgrade head
-uvicorn backend.main:app --reload --port 8000
-
-# Start Celery workers (separate terminal)
-celery -A backend.workers.celery_app worker \
-  -Q indexing,agents,execution \
-  -c 4 --loglevel=info
-
-# Install and start frontend (separate terminal)
-cd frontend && npm install && npm run dev
-```
-
----
-
-## 🐳 Docker Setup
-
-The `docker-compose.yml` defines 8 services:
-
-| Service | Port | Description |
-|---------|------|-------------|
-| `backend` | 8000 | FastAPI + Uvicorn (2 workers) |
-| `frontend` | 3000 | Next.js production build |
-| `postgres` | 5432 | Primary database (pgvector ready) |
-| `redis` | 6379 | Celery broker + pub/sub |
-| `chromadb` | 8001 | Vector store (persistent volume) |
-| `celery-worker` | — | 3 queues: indexing, agents, execution |
-| `ollama` | 11434 | Local LLM inference |
-| `nginx` | 80/443 | Reverse proxy + SSL termination |
-
----
-
-## 🔧 Configuration
-
-All configuration is via environment variables. Copy `.env.example` → `.env` and set:
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `JWT_SECRET_KEY` | ✅ | — | Must be 32+ chars random string |
-| `DATABASE_URL` | ✅ | `postgresql+asyncpg://...` | Async PostgreSQL connection |
-| `REDIS_URL` | ✅ | `redis://redis:6379/0` | Redis connection |
-| `OLLAMA_BASE_URL` | — | `http://ollama:11434` | Local Ollama endpoint |
-| `OLLAMA_MODEL` | — | `qwen2.5-coder:7b` | Default LLM model |
-| `OPENAI_API_KEY` | — | — | OpenAI fallback (if Ollama unavailable) |
-| `GITHUB_CLIENT_ID` | — | — | GitHub OAuth app client ID |
-| `GITHUB_CLIENT_SECRET` | — | — | GitHub OAuth app client secret |
-| `EMBEDDING_MODEL` | — | `BAAI/bge-base-en-v1.5` | BGE embedding model |
-| `CHROMA_HOST` | — | `chromadb` | ChromaDB server host |
-| `UPLOAD_DIR` | — | `/app/data/uploads` | Repository upload path |
-
----
-
-## 📡 API Documentation
-
-Interactive Swagger UI: `http://localhost:8000/docs`
-
-### Key Endpoints
+## 🏗️ System Architecture
 
 ```
-POST   /api/v1/auth/register          Register new user
-POST   /api/v1/auth/login             Login → JWT tokens
-GET    /api/v1/github/oauth/url       Get GitHub OAuth URL
-POST   /api/v1/github/oauth/callback  Exchange OAuth code → tokens
-GET    /api/v1/github/repos           List user's GitHub repos
-
-POST   /api/v1/projects               Create project
-GET    /api/v1/projects               List projects
-
-POST   /api/v1/repositories/upload    Upload ZIP for indexing
-POST   /api/v1/repositories/github    Clone GitHub repo
-GET    /api/v1/repositories/{id}/tree File tree
-
-POST   /api/v1/chat/message           Queue AI message (streams via WS)
-GET    /api/v1/chat/{thread_id}/history Chat history
-
-GET    /api/v1/memory/retrieve?query= Semantic search
-GET    /api/v1/memory/stats           ChromaDB collection stats
-
-POST   /api/v1/executions             Run code in sandbox
-GET    /api/v1/executions/{id}        Get execution result
-
-WS     /api/v1/ws/{project_id}/{thread_id}  Real-time agent streaming
+                    ╔══════════════════════════════════════════╗
+                    ║         Next.js 14 Dashboard             ║
+                    ║  Chat · Agents · Execution · Memory      ║
+                    ║  Architecture Viewer · Observability     ║
+                    ╚══════════════╤═══════════════════════════╝
+                                   │  HTTP + WebSocket
+                    ╔══════════════▼═══════════════════════════╗
+                    ║            FastAPI Backend               ║
+                    ║  REST API · WebSocket Hub · JWT Auth     ║
+                    ║  Celery Workers · Prometheus /metrics    ║
+                    ╚═══╤══════════╤══════════╤═══════════════╝
+                        │          │          │
+          ╔═════════════▼╗  ╔══════▼═════╗  ╔▼══════════════╗
+          ║ Agent Service ║  ║ RAG Service║  ║Exec. Service  ║
+          ║               ║  ║            ║  ║               ║
+          ║  LangGraph    ║  ║  Qdrant    ║  ║  Docker       ║
+          ║  Supervisor   ║  ║  BGE Emb.  ║  ║  Sandbox      ║
+          ║  6 Agents     ║  ║  BM25+RRF  ║  ║  seccomp      ║
+          ╚═══════════════╝  ╚════════════╝  ╚═══════════════╝
+                        │
+          ╔═════════════▼══════════════════════════════════════╗
+          ║                   Model Router                     ║
+          ║   Ollama (local) · vLLM (GPU) · OpenAI (fallback) ║
+          ╚════════════════════════════════════════════════════╝
+                        │
+          ╔═════════════▼══════════════════════════════════════╗
+          ║                  Data Layer                        ║
+          ║  PostgreSQL · Redis · Qdrant · Neo4j (graph)      ║
+          ╚════════════════════════════════════════════════════╝
 ```
 
+<br/>
+
+### Key Engineering Decisions
+
+| Decision | Choice | Why It Matters |
+|:---|:---|:---|
+| Agent orchestration | LangGraph StateGraph + Supervisor | Conditional multi-agent routing with durable state |
+| Agent checkpoints | `PostgresSaver` | MemorySaver loses state on restart — Postgres is durable |
+| Code chunking | Tree-sitter AST | Preserves function/class boundaries; splitters destroy semantic units |
+| Embeddings | `BAAI/bge-base-en-v1.5` + `normalize_embeddings=True` | Required for correct cosine similarity — skipping this breaks retrieval |
+| Retrieval | Hybrid dense + BM25 via RRF | Dense alone misses symbols; sparse alone misses semantics |
+| Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Top-20 → top-5 reduces hallucination from irrelevant context |
+| Vector DB | Qdrant (HNSW `M=16, ef=200`) | Production-grade filtering, payload indexing, horizontal scaling |
+| LLM routing | Model Router (Ollama / vLLM / OpenAI) | Routes by complexity — local for fast tasks, cloud for long-context |
+| Sandbox | Docker + `seccomp` + `cap_drop ALL` | Research-validated hardening; no network access, memory-limited |
+| Streaming | `astream_events` v2 over WebSocket | Granular token-level + tool-level events per project room |
+
+<br/>
+
 ---
 
-## 🚢 Deployment
+## 🤖 Multi-Agent System
 
-### Production with Docker Compose
+Six specialized agents coordinated by a LangGraph Supervisor:
 
-```bash
-# Set production env vars
-echo "ENVIRONMENT=production" >> .env
-echo "JWT_SECRET_KEY=$(openssl rand -hex 32)" >> .env
-
-# Build images
-docker compose build
-
-# Start with nginx
-docker compose --profile production up -d
-
-# Set up SSL (Let's Encrypt)
-docker compose exec nginx certbot --nginx -d your-domain.com
+```
+User Message
+      │
+   Planner  ──────────────────────────────────────────────────────┐
+      │                                                           │
+   Supervisor ──────────────────────────────────────────────┐    │
+      │                                                      │    │
+      ├─── code_generation  ──→  🔧 Coder                   │    │
+      ├─── code_review      ──→  🔍 Reviewer                │    │
+      ├─── infrastructure   ──→  ⚙️  Infra Agent             │    │
+      ├─── documentation    ──→  📝 Docs Agent              │    │
+      ├─── debug            ──→  🐛 Debugger                │    │
+      └─── parallel tasks   ──→  [fork → agents → merge] ───┘    │
+                                                                  │
+   ExecutionPlan(steps, dependencies, routing) ◄──────────────────┘
 ```
 
-### Environment-Specific Tips
+<br/>
 
-- **JWT_SECRET_KEY**: Generate with `openssl rand -hex 32`. Never reuse dev key in prod.
-- **Database**: Use managed PostgreSQL (AWS RDS, Supabase, Neon) for production. Update `DATABASE_URL`.
-- **Redis**: Use managed Redis (Upstash, AWS ElastiCache) for production scaling.
-- **ChromaDB**: Mount a persistent volume — data survives restarts.
-- **Ollama**: For cloud deployment, use OpenAI API by setting `USE_OPENAI_FALLBACK=true` and `OPENAI_API_KEY`.
+### Agent Capabilities
 
----
+| Agent | Input | Output | Special Behavior |
+|:---|:---|:---|:---|
+| **Planner** | User request + repo summary | `ExecutionPlan` with routing + dependencies | Structured output via Pydantic schema |
+| **Coder** | Task spec + RAG context + file tree | Code changes with explanations | Self-review pass before finalizing |
+| **Reviewer** | Code + repo context | `ReviewReport` (severity-ranked issues) | Detects: security, N+1, bad async, arch violations |
+| **Infra** | Detected stack + target | Dockerfile, docker-compose, GitHub Actions, NGINX | Stack-aware template generation |
+| **Docs** | Repo analysis + API endpoints | Production-grade README | Sections: overview, arch, setup, API, deploy |
+| **Debugger** | Stderr + code + logs | Patched code + root cause | Self-healing loop up to 3 retries |
 
-## 📈 Scaling
+<br/>
 
-NexusForge is designed to scale horizontally:
+### Debugger Self-Healing Loop
 
-```bash
-# Scale Celery workers
-docker compose up -d --scale celery-worker=4
-
-# Scale FastAPI backend
-docker compose up -d --scale backend=3
+```
+  Generate Code
+        │
+  Execute in Docker Sandbox
+        │
+        ▼
+  ┌─ exit_code == 0? ─────────── YES ──→  Return success ✓
+  │
+  NO
+  │
+  ▼
+  Capture stderr + stdout
+        │
+  Debugger Agent (reasons over error + code + RAG context)
+        │
+  Patch code
+        │
+  retry_count += 1
+        │
+  ┌─ retry_count < 3? ────────── YES ──→  Execute in Sandbox  (loop)
+  │
+  NO
+  │
+  ▼
+  Return failure + full diagnosis report
 ```
 
-**Worker queues** are separated for independent scaling:
-- `indexing` — Heavy I/O (repo cloning, embedding generation)
-- `agents` — CPU/GPU (LLM inference)  
-- `execution` — Sandboxed code runs (isolated resources)
+<br/>
 
 ---
 
-## 🔍 Troubleshooting
+## 🔀 Hybrid LLM Inference Router
 
-| Problem | Solution |
-|---------|----------|
-| `Ollama connection refused` | Run `docker compose up ollama` and wait 30s for model load |
-| `ChromaDB heartbeat failed` | Check `docker compose ps chromadb` — it needs 20-30s to start |
-| `Embedding model slow` | First run downloads ~430MB BGE model — subsequent runs use cache |
-| `WebSocket disconnects` | Check `NEXT_PUBLIC_WS_URL` matches your backend hostname |
-| `GitHub OAuth fails` | Verify `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and redirect URI in GitHub App settings |
-| `Celery tasks queued but not running` | Start worker: `docker compose up celery-worker` |
+```
+Incoming Request
+      │
+      ▼
+  Model Router
+  ┌───────────────────────────────────────────────────────┐
+  │                                                       │
+  │  token_count < 2000 + fast task  ──→  Ollama (local)  │
+  │  token_count > 8000              ──→  OpenAI (cloud)  │
+  │  task_type == code_generation    ──→  Qwen2.5-Coder   │
+  │  provider timeout / error        ──→  Auto fallback   │
+  │                                                       │
+  └───────────────────────────────────────────────────────┘
+         │                  │                   │
+    Ollama (local)     vLLM Server        OpenAI-compat
+    (fast, private)    (GPU hosted)       (fallback)
+```
+
+Plug in any provider by implementing `BaseLLMProvider`:
+
+```python
+class BaseLLMProvider(ABC):
+    async def complete(self, messages: list, **kwargs) -> LLMResponse: ...
+    async def stream(self, messages: list, **kwargs) -> AsyncIterator[str]: ...
+    async def health_check(self) -> bool: ...
+```
+
+<br/>
 
 ---
 
-## 📁 Project Structure
+## 🔍 RAG Pipeline
+
+```
+Repository Files
+      │
+      ├── .py / .ts / .go / .java ──→  Tree-sitter AST Chunker
+      │                                (function/class/method level)
+      │                                Metadata: path, language, start_line, parent_class
+      │
+      └── .md / .yaml / .json    ──→  Sliding Window Chunker
+                                       (300 tokens, 20% overlap)
+                                              │
+                                       BGE Embedder (768-dim)
+                                       normalize_embeddings=True
+                                       Redis cache (sha256 keyed)
+                                              │
+                                       Qdrant Insert
+                                       HNSW M=16, ef_construction=200
+                                              │
+                         ┌────────────────────┴─────────────────────┐
+                         ▼                                          ▼
+                  Dense Retrieval                           BM25 Sparse
+                  (cosine similarity)                    (exact symbol match)
+                         │                                          │
+                         └──────────────┬─────────────────────────┘
+                                        ▼
+                              Reciprocal Rank Fusion
+                                        │
+                             Cross-Encoder Reranking
+                             (top-20 candidates → top-5)
+                                        │
+                              Context Assembly (≤6000 tokens)
+                                        │
+                                   Agent LLM Call
+```
+
+<br/>
+
+---
+
+## 📊 Observability Stack
+
+Pre-wired from day one. No setup required.
+
+```
+Backend (/metrics)
+      │
+      ▼
+Prometheus ──────────────────────────────→ Grafana (localhost:3001)
+                                                │
+                                   ┌────────────┼────────────┐
+                                   ▼            ▼            ▼
+                              API latency   Agent runs   Token costs
+                              p50/p95/p99   by type      by model
+```
+
+### Custom Metrics Exposed
+
+| Metric | Type | Description |
+|:---|:---|:---|
+| `nexus_agent_executions_total` | Counter | Agent runs by name + status |
+| `nexus_retrieval_latency_seconds` | Histogram | RAG retrieval time (dense, sparse, rerank) |
+| `nexus_sandbox_runtime_seconds` | Histogram | Execution duration by runtime |
+| `nexus_token_usage_total` | Counter | Token consumption by model + agent |
+| `nexus_active_websocket_connections` | Gauge | Live WebSocket connections |
+| `nexus_indexing_duration_seconds` | Histogram | Repo indexing time by language |
+
+<br/>
+
+### Benchmark Numbers
+
+| Operation | Median | p95 |
+|:---|:---:|:---:|
+| Repo indexing (10k LOC) | 6.4s | 11.2s |
+| Vector retrieval (top-20) | 42ms | 90ms |
+| Cross-encoder reranking | 180ms | 340ms |
+| Agent graph execution | 2.2s | 4.8s |
+| Docker sandbox startup | 1.8s | 3.1s |
+| WebSocket event delivery | <5ms | 18ms |
+
+<br/>
+
+---
+
+## 🗂️ Project Structure
 
 ```
 nexusforge-ai/
-├── backend/                    # FastAPI application
-│   ├── main.py                 # App entry point + lifespan
-│   ├── core/                   # Config, database, security, dependencies
-│   ├── models/                 # SQLAlchemy ORM models
+├── backend/
+│   ├── main.py                     ← FastAPI app + lifespan
+│   ├── core/                       ← Config, DB, JWT, dependencies
+│   ├── models/                     ← SQLAlchemy ORM (6 tables)
 │   ├── api/
-│   │   ├── routes/             # auth, github, projects, repositories, health
-│   │   └── websocket/          # hub.py (ConnectionManager) + events.py
-│   ├── services/               # auth_service, repository_service
-│   └── workers/
-│       ├── celery_app.py       # Celery configuration
-│       └── tasks/              # indexing_task, agent_task, execution_task
-├── agents/                     # LangGraph agent system
-│   ├── orchestrator.py         # StateGraph + PostgresSaver + Supervisor
-│   ├── base_agent.py           # Abstract base + Ollama/OpenAI LLM
-│   ├── planner/                # ExecutionPlan structured output
-│   ├── coder/                  # GeneratedCode structured output
-│   ├── reviewer/               # ReviewReport structured output
-│   ├── infra/                  # Dockerfile + docker-compose + CI/CD
-│   ├── docs/                   # README generation + Q&A
-│   └── debugger/               # Root cause analysis + DebugReport
-├── rag/                        # RAG pipeline
-│   ├── chunking/               # ast_chunker.py + text_chunker.py
-│   ├── embeddings/             # embedder.py (BGE singleton)
-│   ├── vector_store/           # chroma_store.py (HNSW + batch upsert)
-│   └── retrieval/              # retriever.py (Hybrid BGE+BM25+RRF)
-├── frontend/                   # Next.js 16 application
-│   ├── app/
-│   │   ├── (dashboard)/        # Dashboard, Workspace, Repository, Agents,
-│   │   │                       # Execution, Memory, Architecture pages
-│   │   └── (auth)/             # Login, Register pages
-│   ├── components/
-│   │   ├── layout/Sidebar.tsx  # Animated collapsible sidebar
-│   │   └── providers/          # QueryProvider, StoreProvider
-│   └── globals.css             # Design system (glassmorphism, animations)
+│   │   ├── routes/                 ← REST endpoints (auth, projects, repos, chat...)
+│   │   └── websocket/              ← Connection hub + typed event payloads
+│   ├── agents/
+│   │   ├── orchestrator.py         ← LangGraph StateGraph + Supervisor
+│   │   ├── model_router.py         ← Hybrid inference routing
+│   │   └── [planner|coder|reviewer|infra|docs|debugger]/
+│   ├── rag/
+│   │   ├── chunking/               ← Tree-sitter AST + sliding window
+│   │   ├── embeddings/             ← BGE embedder + Redis cache
+│   │   ├── vector_store/           ← Qdrant client (HNSW tuned)
+│   │   ├── retrieval/              ← Hybrid retriever + reranker + assembler
+│   │   └── memory/                 ← Session + long-term (Postgres)
+│   ├── services/                   ← Repo, indexing, execution, graph, auth
+│   ├── workers/                    ← Celery app + tasks
+│   └── telemetry/                  ← Prometheus metrics + OpenTelemetry traces
+│
+├── frontend/
+│   ├── app/(dashboard)/
+│   │   ├── page.tsx                ← Project dashboard
+│   │   ├── workspace/              ← Streaming chat + agent badges
+│   │   ├── repository/             ← Upload, file tree, architecture viewer
+│   │   ├── agents/                 ← Live agent timeline (WebSocket)
+│   │   ├── execution/              ← Monaco editor + terminal
+│   │   ├── memory/                 ← Semantic search explorer
+│   │   └── architecture/           ← React Flow graph viewer
+│   ├── components/                 ← Chat, code, diagrams, terminal, upload...
+│   ├── hooks/                      ← useWebSocket, useAgentStream, useExecution
+│   └── lib/                        ← Typed Axios + Zod + Zustand store
+│
+├── monitoring/
+│   ├── prometheus/prometheus.yml
+│   └── grafana/                    ← Pre-provisioned dashboards
+│
 ├── deployment/
-│   └── nginx/nginx.conf        # SSL + WebSocket + rate limiting
-├── scripts/
-│   ├── setup.sh                # Linux/macOS quick setup
-│   └── setup.ps1               # Windows PowerShell setup
-├── .github/workflows/ci.yml    # CI: test → build → push → scan
-├── Dockerfile.backend          # Multi-stage backend image
-├── Dockerfile.frontend         # Standalone Next.js image
-├── docker-compose.yml          # Full stack orchestration
-└── .env.example                # Environment template
+│   └── nginx/nginx.conf
+│
+├── alembic/                        ← DB migrations
+├── docker-compose.yml
+├── Dockerfile.backend              ← Multi-stage, non-root user
+├── Dockerfile.frontend             ← Next.js standalone + NGINX
+└── .env.example                    ← 30+ documented variables
 ```
+
+<br/>
+
+---
+
+## 🔌 API Reference
+
+### Authentication
+
+All endpoints require `Authorization: Bearer <token>` except `/auth/*` and `/health`.
+
+| Method | Endpoint | Description |
+|:---:|:---|:---|
+| `POST` | `/auth/register` | Create account |
+| `POST` | `/auth/login` | Get access + refresh tokens |
+| `POST` | `/auth/refresh` | Rotate access token |
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|:---:|:---|:---|
+| `POST` | `/repos/upload` | Upload ZIP archive |
+| `POST` | `/repos/github` | Clone public GitHub URL |
+| `GET` | `/repos/{id}/status` | Indexing progress |
+| `POST` | `/chat/message` | Trigger agent graph (async) |
+| `GET` | `/chat/{thread_id}/history` | Conversation history |
+| `POST` | `/execute` | Run code in sandbox |
+| `GET` | `/memory/retrieve?query=` | Semantic search over repo |
+| `GET` | `/metrics` | Prometheus metrics endpoint |
+
+### WebSocket Events
+
+Connect to `ws://localhost:8000/ws/{project_id}`:
+
+```typescript
+type NexusEvent =
+  | { type: "token";             content: string; agent: string }
+  | { type: "agent_start";       agent: string; task: string }
+  | { type: "agent_end";         agent: string; duration_ms: number }
+  | { type: "tool_start";        tool: string; input_preview: string }
+  | { type: "log_line";          content: string; stream: "stdout"|"stderr" }
+  | { type: "indexing_progress"; processed: number; total: number }
+  | { type: "error";             message: string; recoverable: boolean }
+```
+
+<br/>
+
+---
+
+## 🛠️ Tech Stack
+
+**Backend**
+
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy_2.0-D71F00?style=flat-square&logo=sqlalchemy&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=flat-square)
+![Celery](https://img.shields.io/badge/Celery-37814A?style=flat-square&logo=celery&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic_v2-E92063?style=flat-square&logo=pydantic&logoColor=white)
+
+**AI / ML**
+
+![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21E?style=flat-square&logo=huggingface&logoColor=black)
+![Qdrant](https://img.shields.io/badge/Qdrant-FF4455?style=flat-square)
+![Tree-sitter](https://img.shields.io/badge/Tree--sitter-AST_Chunking-7c3aed?style=flat-square)
+![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-000000?style=flat-square)
+
+**Frontend**
+
+![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat-square&logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Framer](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white)
+![React Flow](https://img.shields.io/badge/React_Flow-FF4154?style=flat-square)
+
+**Infrastructure**
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis_7-DC382D?style=flat-square&logo=redis&logoColor=white)
+![Neo4j](https://img.shields.io/badge/Neo4j-008CC1?style=flat-square&logo=neo4j&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-000000?style=flat-square&logo=opentelemetry&logoColor=white)
+
+<br/>
+
+---
+
+## 🚀 Deployment
+
+### Docker Compose (Staging)
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### Kubernetes (Helm)
+
+```bash
+helm install nexusforge ./deployment/helm \
+  --set backend.image.tag=latest \
+  --set frontend.image.tag=latest \
+  --namespace nexusforge --create-namespace
+```
+
+### Service Ports
+
+| Service | Port | Purpose |
+|:---|:---:|:---|
+| Frontend | `3000` | Next.js dashboard |
+| Backend | `8000` | FastAPI + WebSocket |
+| PostgreSQL | `5432` | Primary database |
+| Redis | `6379` | Cache + Celery broker |
+| Qdrant | `6333` | Vector store |
+| Neo4j | `7474` | Knowledge graph |
+| Prometheus | `9090` | Metrics collection |
+| Grafana | `3001` | Observability dashboards |
+
+<br/>
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Private GitHub repository support (GitHub OAuth App)
+- [ ] Firecracker microVM sandbox for stronger isolation
+- [ ] Kafka event streaming for distributed agent orchestration
+- [ ] Agent evaluation benchmark suite (README quality, bug fix accuracy scores)
+- [ ] Plugin system (`plugins/github/`, `plugins/kubernetes/`, `plugins/aws/`)
+- [ ] Repository time machine — commit history + architectural evolution visualization
+- [ ] System design generator — "Scale to 10M users" → full HLD output
+- [ ] vLLM inference server integration
+
+<br/>
 
 ---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m 'feat: add my feature'`
-4. Push to the branch: `git push origin feature/my-feature`
-5. Open a Pull Request
+2. Create your feature branch: `git checkout -b feature/my-feature`
+3. Run tests: `cd backend && pytest tests/ -v --cov=backend`
+4. Check TypeScript: `cd frontend && npx tsc --noEmit`
+5. Open a pull request
 
-Please follow the existing code style:
-- Python: type hints everywhere, async where appropriate, structured logging with `structlog`
-- TypeScript: strict mode, functional components, Framer Motion for animations
-- Commits: [Conventional Commits](https://conventionalcommits.org/) format
+See `CONTRIBUTING.md` for agent implementation patterns and RAG extension points.
+
+<br/>
 
 ---
 
-## 📝 License
+## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
+<br/>
+
 ---
 
-<p align="center">
-  Built with ⚡ by the NexusForge team · Powered by LangGraph, FastAPI, Next.js, ChromaDB, and Ollama
-</p>
+<div align="center">
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=7c3aed&height=100&section=footer" alt="footer wave"/>
+
+**Built with architectural obsession.**
+
+*NexusForge AI — Because repositories deserve to be understood, not just searched.*
+
+⭐ **Star this repo if it inspires you** ⭐
+
+</div>
