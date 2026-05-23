@@ -1,0 +1,6 @@
+# ─── ML packages (heavy — ~2GB download) ─────────────────
+# Install AFTER requirements.txt:
+#   pip install -r requirements-ml.txt
+torch>=2.5.0
+sentence-transformers>=3.3.1
+fastembed>=0.3.0

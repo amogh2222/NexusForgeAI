@@ -1,0 +1,223 @@
+version: "3.9"
+
+services:
+  # ──────────────────────────────────────────
+  # PostgreSQL — Persistent relational database
+  # ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexusforge_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexusforge}
+      POSTGRES_USER: ${POSTGRES_USER:-nexusforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexusforge_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexusforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────
+  # Redis — Celery broker + cache + pub/sub
+  # ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexusforge_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────
+  # Qdrant — Production vector database (Rust-backed)
+  # Dashboard: http://localhost:6333/dashboard
+  # ──────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    container_name: nexusforge_qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__LOG_LEVEL: WARN
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"   # REST API + Dashboard UI
+      - "6334:6334"   # gRPC
+    healthcheck:
+      test: ["CMD-SHELL", "./qdrant --version || wget -qO- http://localhost:6333/readyz || true"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ──────────────────────────────────────────
+  # Neo4j — Knowledge graph for architectural reasoning
+  # Browser: http://localhost:7474  (user: neo4j / pass: nexusforge_graph)
+  # ──────────────────────────────────────────
+  neo4j:
+    image: neo4j:5.18-community
+    container_name: nexusforge_neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-nexusforge_graph}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_pagecache_size: 256M
+      NEO4J_dbms_memory_heap_initial__size: 256M
+      NEO4J_dbms_memory_heap_max__size: 512M
+    volumes:
+      - neo4j_data:/data
+    ports:
+      - "7687:7687"   # Bolt protocol
+      - "7474:7474"   # Browser UI
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 > /dev/null 2>&1 || true"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ──────────────────────────────────────────
+  # FastAPI Backend
+  # ──────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: nexusforge_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nexusforge}:${POSTGRES_PASSWORD:-nexusforge_secret}@postgres:5432/${POSTGRES_DB:-nexusforge}
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-nexusforge_graph}
+    volumes:
+      - ./backend:/app/backend
+      - ./agents:/app/agents
+      - ./rag:/app/rag
+      - ./sandbox:/app/sandbox
+      - repo_uploads:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock  # For sandbox execution
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────
+  # Celery Worker — Async task processing
+  # ──────────────────────────────────────────
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: nexusforge_celery
+    restart: unless-stopped
+    command: celery -A backend.workers.celery_app worker --loglevel=info --concurrency=4
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nexusforge}:${POSTGRES_PASSWORD:-nexusforge_secret}@postgres:5432/${POSTGRES_DB:-nexusforge}
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-nexusforge_graph}
+    volumes:
+      - ./backend:/app/backend
+      - ./agents:/app/agents
+      - ./rag:/app/rag
+      - ./sandbox:/app/sandbox
+      - repo_uploads:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ──────────────────────────────────────────
+  # Celery Flower — Task monitoring UI
+  # ──────────────────────────────────────────
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: nexusforge_flower
+    restart: unless-stopped
+    command: celery -A backend.workers.celery_app flower --port=5555
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+  # ──────────────────────────────────────────
+  # Next.js Frontend
+  # ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: nexusforge_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # ──────────────────────────────────────────
+  # NGINX — Reverse proxy
+  # ──────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: nexusforge_nginx
+    restart: unless-stopped
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  neo4j_data:
+  repo_uploads:
+
+networks:
+  default:
+    name: nexusforge_network

@@ -1,0 +1,5 @@
+# ─── Evaluation packages (optional — RAGAS benchmarks) ────
+# Install AFTER requirements.txt:
+#   pip install -r requirements-eval.txt
+ragas>=0.2.0
+datasets>=2.20.0

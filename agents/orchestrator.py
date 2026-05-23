@@ -1,0 +1,375 @@
+"""
+NexusForge AI — LangGraph Multi-Agent Orchestrator
+StateGraph with Supervisor pattern + PostgresSaver checkpoints.
+Research-validated: PostgresSaver (NOT MemorySaver) for production.
+"""
+import time
+from typing import Annotated, Any, Optional, TypedDict
+
+import structlog
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.graph import END, StateGraph, add_messages
+from langgraph.graph.state import CompiledStateGraph
+
+from backend.api.websocket.events import AgentEndEvent, AgentStartEvent
+from backend.core.config import settings
+
+log = structlog.get_logger()
+
+
+# ════════════════════════════════════════════════════════════════════
+# SHARED STATE SCHEMA
+# Research-validated: Store IDs/refs, not large content blobs,
+# to prevent context explosion in graph state.
+# ════════════════════════════════════════════════════════════════════
+class NexusState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]  # Append-mode reducer
+    project_id: str
+    thread_id: str
+    repository_id: Optional[str]
+
+    # Task tracking
+    current_task: str
+    task_type: str   # "chat" | "readme" | "review" | "debug" | "codegen" | "infra"
+
+    # RAG context (text summary only, not raw embeddings)
+    retrieved_context: str
+    context_sources: list[str]  # file paths
+
+    # Agent outputs (populated as pipeline runs)
+    plan: Optional[dict]
+    generated_code: Optional[dict]
+    review_results: Optional[dict]
+    infra_bundle: Optional[dict]
+    readme_content: Optional[str]
+    debug_report: Optional[dict]
+
+    # Execution
+    execution_id: Optional[str]
+    execution_result: Optional[dict]
+
+    # Metadata
+    agent_history: list[str]
+    error: Optional[str]
+    total_tokens: int
+
+
+def create_initial_state(
+    project_id: str,
+    thread_id: str,
+    user_message: str,
+    repository_id: Optional[str] = None,
+) -> NexusState:
+    """Factory for creating a fresh graph state."""
+    return {
+        "messages": [HumanMessage(content=user_message)],
+        "project_id": project_id,
+        "thread_id": thread_id,
+        "repository_id": repository_id,
+        "current_task": user_message,
+        "task_type": "chat",
+        "retrieved_context": "",
+        "context_sources": [],
+        "plan": None,
+        "generated_code": None,
+        "review_results": None,
+        "infra_bundle": None,
+        "readme_content": None,
+        "debug_report": None,
+        "execution_id": None,
+        "execution_result": None,
+        "agent_history": [],
+        "error": None,
+        "total_tokens": 0,
+    }
+
+
+# ════════════════════════════════════════════════════════════════════
+# ORCHESTRATOR
+# ════════════════════════════════════════════════════════════════════
+class NexusOrchestrator:
+    """
+    Central LangGraph orchestrator managing the 6 specialized agents.
+    Uses a Supervisor pattern with conditional routing based on task_type.
+    """
+
+    def __init__(self):
+        self._graph: Optional[CompiledStateGraph] = None
+
+    async def _build_graph(self) -> CompiledStateGraph:
+        """Build and compile the LangGraph StateGraph."""
+        from agents.planner.agent import PlannerAgent
+        from agents.coder.agent import CoderAgent
+        from agents.reviewer.agent import ReviewerAgent
+        from agents.infra.agent import InfraAgent
+        from agents.docs.agent import DocsAgent
+        from agents.debugger.agent import DebuggerAgent
+
+        planner = PlannerAgent()
+        coder = CoderAgent()
+        reviewer = ReviewerAgent()
+        infra = InfraAgent()
+        docs = DocsAgent()
+        debugger = DebuggerAgent()
+
+        # ─── Graph Definition ────────────────────────────────────
+        graph = StateGraph(NexusState)
+
+        # Add all agent nodes
+        graph.add_node("retrieve_context", self._retrieve_context_node)
+        graph.add_node("supervisor", self._supervisor_node)
+        graph.add_node("planner", planner.run)
+        graph.add_node("coder", coder.run)
+        graph.add_node("reviewer", reviewer.run)
+        graph.add_node("infra", infra.run)
+        graph.add_node("docs", docs.run)
+        graph.add_node("debugger", debugger.run)
+        graph.add_node("finalizer", self._finalizer_node)
+
+        # ─── Entry: always retrieve context first ────────────────
+        graph.set_entry_point("retrieve_context")
+        graph.add_edge("retrieve_context", "supervisor")
+
+        # ─── Supervisor routes to specialized agents ─────────────
+        graph.add_conditional_edges(
+            "supervisor",
+            self._route_task,
+            {
+                "planner": "planner",
+                "coder": "coder",
+                "reviewer": "reviewer",
+                "infra": "infra",
+                "docs": "docs",
+                "debugger": "debugger",
+                "finalize": "finalizer",
+            },
+        )
+
+        # ─── After planning, route to execution ──────────────────
+        graph.add_conditional_edges(
+            "planner",
+            self._route_after_planning,
+            {
+                "coder": "coder",
+                "reviewer": "reviewer",
+                "infra": "infra",
+                "docs": "docs",
+                "finalize": "finalizer",
+            },
+        )
+
+        # ─── After coding, always review ─────────────────────────
+        graph.add_edge("coder", "reviewer")
+
+        # ─── Reviewer can trigger debugger ────────────────────────
+        graph.add_conditional_edges(
+            "reviewer",
+            self._route_after_review,
+            {
+                "debugger": "debugger",
+                "finalize": "finalizer",
+            },
+        )
+
+        # ─── All terminal nodes go to finalizer ──────────────────
+        graph.add_edge("infra", "finalizer")
+        graph.add_edge("docs", "finalizer")
+        graph.add_edge("debugger", "finalizer")
+        graph.add_edge("finalizer", END)
+
+        # ─── Compile with PostgresSaver checkpoint ────────────────
+        # Research-validated: PostgresSaver survives restarts
+        checkpointer = await AsyncPostgresSaver.from_conn_string(
+            settings.DATABASE_SYNC_URL.replace("+asyncpg", "").replace("postgresql", "postgresql")
+        )
+        await checkpointer.setup()
+
+        return graph.compile(checkpointer=checkpointer)
+
+    async def get_graph(self) -> CompiledStateGraph:
+        """Lazily build and cache the compiled graph."""
+        if self._graph is None:
+            self._graph = await self._build_graph()
+        return self._graph
+
+    # ─── Nodes ───────────────────────────────────────────────────
+
+    async def _retrieve_context_node(self, state: NexusState) -> dict:
+        """RAG retrieval: find relevant code context for the current task."""
+        if not state.get("repository_id"):
+            return {"retrieved_context": "", "context_sources": []}
+
+        try:
+            from rag.retrieval.retriever import HybridRetriever
+            retriever = HybridRetriever()
+            context, sources = await retriever.retrieve(
+                query=state["current_task"],
+                project_id=state["project_id"],
+            )
+            return {
+                "retrieved_context": context,
+                "context_sources": sources,
+            }
+        except Exception as e:
+            log.warning("orchestrator.retrieval_failed", error=str(e))
+            return {"retrieved_context": "", "context_sources": []}
+
+    async def _supervisor_node(self, state: NexusState) -> dict:
+        """Classify the task and determine which agent should handle it."""
+        task = state["current_task"].lower()
+
+        # Rule-based routing (fast, predictable)
+        if any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash"]):
+            task_type = "debug"
+        elif any(kw in task for kw in ["generate", "write", "implement", "create", "code", "function", "class"]):
+            task_type = "codegen"
+        elif any(kw in task for kw in ["review", "audit", "check", "security", "performance", "optimize"]):
+            task_type = "review"
+        elif any(kw in task for kw in ["dockerfile", "deploy", "ci/cd", "kubernetes", "docker", "infra", "pipeline"]):
+            task_type = "infra"
+        elif any(kw in task for kw in ["readme", "documentation", "explain", "document", "architecture"]):
+            task_type = "readme"
+        else:
+            task_type = "chat"
+
+        log.info("orchestrator.task_classified", task_type=task_type, task=task[:100])
+        return {"task_type": task_type}
+
+    def _route_task(self, state: NexusState) -> str:
+        """Route from supervisor to the appropriate agent."""
+        routing_map = {
+            "debug": "debugger",
+            "codegen": "planner",
+            "review": "reviewer",
+            "infra": "infra",
+            "readme": "docs",
+            "chat": "docs",  # For general Q&A, docs agent handles it
+        }
+        return routing_map.get(state["task_type"], "finalize")
+
+    def _route_after_planning(self, state: NexusState) -> str:
+        """After planning, route to the appropriate execution agent."""
+        plan = state.get("plan", {})
+        if not plan:
+            return "finalize"
+        first_step_agent = plan.get("first_agent", "coder")
+        return first_step_agent if first_step_agent in ["coder", "reviewer", "infra", "docs"] else "coder"
+
+    def _route_after_review(self, state: NexusState) -> str:
+        """After review, trigger debugger if critical issues found."""
+        review = state.get("review_results", {})
+        critical_issues = review.get("critical_issues", [])
+        if critical_issues and len(critical_issues) > 0:
+            return "debugger"
+        return "finalize"
+
+    async def _finalizer_node(self, state: NexusState) -> dict:
+        """Aggregate all agent outputs into a final response message."""
+        parts = []
+
+        if state.get("plan"):
+            parts.append(f"📋 **Plan Created**: {len(state['plan'].get('steps', []))} steps")
+
+        if state.get("generated_code"):
+            files = state["generated_code"].get("files", [])
+            parts.append(f"💻 **Code Generated**: {len(files)} file(s)")
+
+        if state.get("review_results"):
+            issues = state["review_results"].get("issues", [])
+            parts.append(f"🔍 **Review Complete**: {len(issues)} issue(s) found")
+
+        if state.get("readme_content"):
+            parts.append(f"📄 **README Generated**: {len(state['readme_content'])} characters")
+
+        if state.get("infra_bundle"):
+            parts.append("🐳 **Infrastructure Generated**: Dockerfile + docker-compose + CI/CD")
+
+        if state.get("debug_report"):
+            parts.append(f"🐛 **Debug Complete**: {state['debug_report'].get('root_cause', 'Issue identified')}")
+
+        if not parts:
+            parts.append("✅ Task complete")
+
+        summary = "\n".join(parts)
+        return {
+            "messages": [AIMessage(content=summary)],
+            "agent_history": state["agent_history"] + ["finalizer"],
+        }
+
+    # ─── Public API ──────────────────────────────────────────────
+
+    async def arun(
+        self,
+        project_id: str,
+        thread_id: str,
+        user_message: str,
+        repository_id: Optional[str] = None,
+        websocket_broadcaster=None,
+    ) -> NexusState:
+        """
+        Run the agent pipeline for a user message.
+        Streams events via websocket_broadcaster if provided.
+        """
+        graph = await self.get_graph()
+        state = create_initial_state(project_id, thread_id, user_message, repository_id)
+        config = {"configurable": {"thread_id": thread_id}}
+
+        final_state = None
+
+        # Stream events using astream_events v2 (research-validated)
+        async for event in graph.astream_events(state, config=config, version="v2"):
+            kind = event["event"]
+
+            if kind == "on_chain_start":
+                node = event.get("name", "")
+                if node and websocket_broadcaster:
+                    await websocket_broadcaster(
+                        AgentStartEvent(
+                            agent_name=node,
+                            action=f"Starting {node}",
+                            thread_id=thread_id,
+                        ).to_dict(),
+                        project_id=project_id,
+                        thread_id=thread_id,
+                    )
+
+            elif kind == "on_chat_model_stream":
+                content = event["data"]["chunk"].content
+                if content and websocket_broadcaster:
+                    from backend.api.websocket.events import TokenEvent
+                    await websocket_broadcaster(
+                        TokenEvent(
+                            content=content,
+                            thread_id=thread_id,
+                        ).to_dict(),
+                        project_id=project_id,
+                        thread_id=thread_id,
+                    )
+
+            elif kind == "on_chain_end":
+                node = event.get("name", "")
+                if node and websocket_broadcaster:
+                    await websocket_broadcaster(
+                        AgentEndEvent(
+                            agent_name=node,
+                            action=f"Completed {node}",
+                            thread_id=thread_id,
+                        ).to_dict(),
+                        project_id=project_id,
+                        thread_id=thread_id,
+                    )
+                final_state = event.get("data", {}).get("output")
+
+        return final_state
+
+
+# ─── Singleton ───────────────────────────────────────────────────
+_orchestrator: Optional[NexusOrchestrator] = None
+
+
+def get_orchestrator() -> NexusOrchestrator:
+    global _orchestrator
+    if _orchestrator is None:
+        _orchestrator = NexusOrchestrator()
+    return _orchestrator

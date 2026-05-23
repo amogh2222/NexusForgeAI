@@ -1,0 +1,86 @@
+# ═══════════════════════════════════════════════════════
+# NexusForge AI — requirements.txt
+# Install with: pip install -r requirements.txt
+#
+# STEP 1 (core — fast):
+#   pip install -r requirements.txt
+#
+# STEP 2 (ML — large download, ~2GB):
+#   pip install -r requirements-ml.txt
+#
+# STEP 3 (eval — optional, for RAGAS benchmarks):
+#   pip install -r requirements-eval.txt
+# ═══════════════════════════════════════════════════════
+
+# ─── Web Framework ──────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.12
+websockets>=13.0
+
+# ─── Database ───────────────────────────────────────────
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30.0
+psycopg2-binary>=2.9.9
+alembic>=1.14.0
+
+# ─── Auth ───────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# ─── Async / Background Tasks ────────────────────────────
+celery[redis]>=5.4.0
+redis[hiredis]>=5.2.0
+flower>=2.0.1
+
+# ─── AI / LLM ───────────────────────────────────────────
+langchain>=0.3.7
+langchain-community>=0.3.7
+langchain-ollama>=0.2.1
+langchain-openai>=0.2.10
+langchain-core>=0.3.0
+langgraph>=0.2.56
+langgraph-checkpoint-postgres>=2.0.9
+langsmith>=0.1.0
+
+# ─── Vector DB ──────────────────────────────────────────
+qdrant-client>=1.9.0
+
+# ─── Knowledge Graph ────────────────────────────────────
+neo4j>=5.18.0
+
+# ─── LLM Router ─────────────────────────────────────────
+litellm>=1.40.0
+
+# ─── Git Intelligence ────────────────────────────────────
+pydriller>=2.6
+gitpython>=3.1.43
+
+# ─── GitHub ─────────────────────────────────────────────
+PyGithub>=2.5.0
+httpx>=0.28.0
+
+# ─── Code Analysis ──────────────────────────────────────
+tree-sitter>=0.23.2
+tree-sitter-python>=0.23.4
+tree-sitter-javascript>=0.23.1
+tree-sitter-typescript>=0.23.2
+tree-sitter-go>=0.23.4
+
+# ─── Observability ──────────────────────────────────────
+prometheus-fastapi-instrumentator>=7.0.0
+opentelemetry-api>=1.28.0
+opentelemetry-sdk>=1.28.0
+opentelemetry-instrumentation-fastapi>=0.49b0
+structlog>=24.4.0
+
+# ─── Utilities ──────────────────────────────────────────
+pydantic[email]>=2.10.0
+pydantic-settings>=2.6.1
+python-dotenv>=1.0.1
+aiofiles>=24.1.0
+tenacity>=9.0.0
+rich>=13.9.4
+chardet>=5.2.0
+python-magic-bin>=0.4.14; sys_platform == "win32"
+python-magic>=0.4.27; sys_platform != "win32"
