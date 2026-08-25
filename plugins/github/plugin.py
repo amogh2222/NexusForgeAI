@@ -46,7 +46,14 @@ class GitHubPlugin(NexusPlugin):
     async def initialize(self, config: dict) -> bool:
         try:
             from github import Github
-            self._client = Github(config["token"])
+            
+            # Use provided token or fallback to OAuth user token if available in config
+            token = config.get("token") or config.get("oauth_token")
+            if not token:
+                log.warning("github_plugin.no_token")
+                return False
+                
+            self._client = Github(token)
             self._org = config.get("org", "")
             self._repo = config.get("repo", "")
             log.info("github_plugin.initialized", org=self._org, repo=self._repo)
