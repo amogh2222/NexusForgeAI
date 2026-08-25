@@ -11,7 +11,7 @@ WORKDIR /app
 # ─── Stage 1: Install dependencies ───────────────────────────────
 FROM base AS deps
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci --prefer-offline
+RUN npm install
 
 # ─── Stage 2: Build application ──────────────────────────────────
 FROM base AS builder
