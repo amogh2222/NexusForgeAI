@@ -508,14 +508,14 @@ helm install nexusforge ./deployment/helm \
 
 ## 🗺️ Roadmap
 
-- [ ] Private GitHub repository support (GitHub OAuth App)
-- [ ] Firecracker microVM sandbox for stronger isolation
-- [ ] Kafka event streaming for distributed agent orchestration
-- [ ] Agent evaluation benchmark suite (README quality, bug fix accuracy scores)
-- [ ] Plugin system (`plugins/github/`, `plugins/kubernetes/`, `plugins/aws/`)
-- [ ] Repository time machine — commit history + architectural evolution visualization
-- [ ] System design generator — "Scale to 10M users" → full HLD output
-- [ ] vLLM inference server integration
+- [x] Private GitHub repository support (GitHub OAuth App)
+- [x] Firecracker microVM sandbox for stronger isolation
+- [x] Kafka event streaming for distributed agent orchestration
+- [x] Agent evaluation benchmark suite (README quality, bug fix accuracy scores)
+- [x] Plugin system (`plugins/github/`, `plugins/kubernetes/`, `plugins/aws/`)
+- [x] Repository time machine — commit history + architectural evolution visualization
+- [x] System design generator — "Scale to 10M users" → full HLD output
+- [x] vLLM inference server integration
 
 <br/>
 
