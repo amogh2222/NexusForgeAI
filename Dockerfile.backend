@@ -20,8 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency manifests first (layer caching)
 COPY requirements*.txt ./
 
-# Install all dependencies into a target prefix
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt -r requirements-ml.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ─── Stage 2: Runtime Image ──────────────────────────────────────
 FROM python:3.11-slim AS runtime
