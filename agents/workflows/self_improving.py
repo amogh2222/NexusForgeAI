@@ -132,9 +132,9 @@ async def generate_node(state: SelfImprovingState) -> dict:
 
 async def execute_node(state: SelfImprovingState) -> dict:
     """EXECUTE: Run generated code in sandbox."""
-    from sandbox.isolator import SandboxIsolator
-
-    isolator = SandboxIsolator()
+    from sandbox.firecracker_isolator import FirecrackerIsolator
+    
+    isolator = FirecrackerIsolator()
     code = state["generated_code"]
     language = state["language"]
 

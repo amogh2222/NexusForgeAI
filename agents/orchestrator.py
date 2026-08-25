@@ -44,6 +44,8 @@ class NexusState(TypedDict):
     infra_bundle: Optional[dict]
     readme_content: Optional[str]
     debug_report: Optional[dict]
+    sysdesign_result: Optional[str]
+    time_machine_result: Optional[str]
 
     # Execution
     execution_id: Optional[str]
@@ -77,6 +79,8 @@ def create_initial_state(
         "infra_bundle": None,
         "readme_content": None,
         "debug_report": None,
+        "sysdesign_result": None,
+        "time_machine_result": None,
         "execution_id": None,
         "execution_result": None,
         "agent_history": [],
@@ -105,6 +109,8 @@ class NexusOrchestrator:
         from agents.infra.agent import InfraAgent
         from agents.docs.agent import DocsAgent
         from agents.debugger.agent import DebuggerAgent
+        from agents.sysdesign.agent import SysDesignAgent
+        from agents.time_machine.agent import TimeMachineAgent
 
         planner = PlannerAgent()
         coder = CoderAgent()
@@ -112,6 +118,8 @@ class NexusOrchestrator:
         infra = InfraAgent()
         docs = DocsAgent()
         debugger = DebuggerAgent()
+        sysdesign = SysDesignAgent()
+        time_machine = TimeMachineAgent()
 
         # ─── Graph Definition ────────────────────────────────────
         graph = StateGraph(NexusState)
@@ -125,6 +133,8 @@ class NexusOrchestrator:
         graph.add_node("infra", infra.run)
         graph.add_node("docs", docs.run)
         graph.add_node("debugger", debugger.run)
+        graph.add_node("sysdesign", sysdesign.run)
+        graph.add_node("time_machine", time_machine.run)
         graph.add_node("finalizer", self._finalizer_node)
 
         # ─── Entry: always retrieve context first ────────────────
@@ -142,6 +152,8 @@ class NexusOrchestrator:
                 "infra": "infra",
                 "docs": "docs",
                 "debugger": "debugger",
+                "sysdesign": "sysdesign",
+                "time_machine": "time_machine",
                 "finalize": "finalizer",
             },
         )
@@ -176,6 +188,8 @@ class NexusOrchestrator:
         graph.add_edge("infra", "finalizer")
         graph.add_edge("docs", "finalizer")
         graph.add_edge("debugger", "finalizer")
+        graph.add_edge("sysdesign", "finalizer")
+        graph.add_edge("time_machine", "finalizer")
         graph.add_edge("finalizer", END)
 
         # ─── Compile with PostgresSaver checkpoint ────────────────
@@ -230,6 +244,10 @@ class NexusOrchestrator:
             task_type = "infra"
         elif any(kw in task for kw in ["readme", "documentation", "explain", "document", "architecture"]):
             task_type = "readme"
+        elif any(kw in task for kw in ["system design", "hld", "scale", "architect", "scale to"]):
+            task_type = "sysdesign"
+        elif any(kw in task for kw in ["history", "evolution", "time machine", "drift", "commits"]):
+            task_type = "time_machine"
         else:
             task_type = "chat"
 
@@ -244,6 +262,8 @@ class NexusOrchestrator:
             "review": "reviewer",
             "infra": "infra",
             "readme": "docs",
+            "sysdesign": "sysdesign",
+            "time_machine": "time_machine",
             "chat": "docs",  # For general Q&A, docs agent handles it
         }
         return routing_map.get(state["task_type"], "finalize")
@@ -287,6 +307,12 @@ class NexusOrchestrator:
 
         if state.get("debug_report"):
             parts.append(f"🐛 **Debug Complete**: {state['debug_report'].get('root_cause', 'Issue identified')}")
+
+        if state.get("sysdesign_result"):
+            parts.append(f"🏗️ **System Design Complete**: Generated HLD")
+
+        if state.get("time_machine_result"):
+            parts.append(f"⏳ **Time Machine Analysis Complete**: Analyzed architectural drift")
 
         if not parts:
             parts.append("✅ Task complete")

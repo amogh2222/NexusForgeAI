@@ -17,6 +17,7 @@ from backend.api.routes.auth import router as auth_router
 from backend.api.routes.projects import router as projects_router
 from backend.api.routes.repositories import router as repositories_router
 from backend.api.routes.github import router as github_router
+from backend.api.routes.github_auth import router as github_auth_router
 from backend.api.routes.intelligence import router as intelligence_router
 from backend.api.routes.evaluation import router as evaluation_router
 from backend.api.routes.workspace import router as workspace_router
@@ -63,6 +64,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     # Initialize model router
     from agents.router.model_router import ModelRouter
     ModelRouter.get_instance()
+
+    # Initialize Kafka Streams
+    from backend.core.kafka_stream import KafkaEventStream
+    kafka_stream = KafkaEventStream(bootstrap_servers="kafka:9092")
+    await kafka_stream.connect_producer()
+    log.info("nexusforge.kafka_connected")
 
     yield
 
@@ -115,6 +122,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router,     prefix="/api/v1/projects",     tags=["projects"])
     app.include_router(repositories_router, prefix="/api/v1/repos",        tags=["repositories"])
     app.include_router(github_router,       prefix="/api/v1/github",       tags=["github"])
+    app.include_router(github_auth_router,  prefix="/api/v1",              tags=["auth"])
     # ─── v2 Routes ───────────────────────────────────────────────────────────
     app.include_router(intelligence_router, prefix="/api/v1",              tags=["intelligence"])
     app.include_router(evaluation_router,   prefix="/api/v1",              tags=["evaluation"])
