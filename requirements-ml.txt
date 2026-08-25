@@ -2,5 +2,6 @@
 # Install AFTER requirements.txt:
 #   pip install -r requirements-ml.txt
 torch>=2.5.0
+--extra-index-url https://download.pytorch.org/whl/cpu
 sentence-transformers>=3.3.1
 fastembed>=0.3.0
