@@ -1,5 +1,4 @@
 """NexusForge AI — Code Execution Celery Task (subprocess-based sandbox)"""
-import asyncio
 import subprocess
 import tempfile
 import time

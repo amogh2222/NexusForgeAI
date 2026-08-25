@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import structlog
-from qdrant_client import QdrantClient, models
+from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
     FieldCondition,
@@ -34,7 +34,6 @@ from qdrant_client.models import (
     SparseVector,
     SparseVectorParams,
     VectorParams,
-    VectorsConfig,
 )
 
 log = structlog.get_logger()

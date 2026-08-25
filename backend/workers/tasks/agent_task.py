@@ -94,7 +94,7 @@ def run_agent_pipeline(
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        final_state = loop.run_until_complete(_run())
+        loop.run_until_complete(_run())
         loop.close()
 
         duration_ms = int((time.time() - start_time) * 1000)

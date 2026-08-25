@@ -1,6 +1,5 @@
 """NexusForge AI — Planner Agent"""
 import time
-from typing import Optional
 
 import structlog
 from langchain_core.messages import SystemMessage, HumanMessage

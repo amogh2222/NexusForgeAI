@@ -10,7 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from jose import JWTError
 
 from backend.api.websocket.hub import manager
-from backend.api.websocket.events import ConnectedEvent, ErrorEvent, EventType
+from backend.api.websocket.events import ConnectedEvent, ErrorEvent
 from backend.core.security import verify_access_token
 
 log = structlog.get_logger()
@@ -27,13 +27,13 @@ async def websocket_project(
 ):
     """
     WebSocket endpoint for real-time project updates.
-    
+
     Usage: ws://localhost:8000/ws/{project_id}?thread_id=xxx&token=jwt_token
-    
+
     Events received from client:
     - {"type": "chat", "content": "...", "thread_id": "..."}
     - {"type": "ping"}
-    
+
     Events sent to client:
     - All event types from events.py
     """

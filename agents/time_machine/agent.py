@@ -29,7 +29,7 @@ class TimeMachineAgent(BaseAgent):
         """Extracts the git log from the current directory."""
         try:
             result = subprocess.run(
-                ["git", "log", f"-n", str(limit), "--oneline", "--stat"],
+                ["git", "log", "-n", str(limit), "--oneline", "--stat"],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -41,27 +41,27 @@ class TimeMachineAgent(BaseAgent):
 
     async def run(self, state: dict) -> dict:
         start_time = time.perf_counter()
-        
+
         log.info("time_machine_agent.started")
-        
+
         history_text = self._get_git_history(limit=state.get("history_limit", 50))
-        
+
         messages = [
             SystemMessage(content=self._system_prompt),
             HumanMessage(content=f"Git History Summary:\n```text\n{history_text[:8000]}\n```")
         ]
-        
+
         try:
             response = await self._invoke_llm(messages)
             content = response.content if hasattr(response, "content") else str(response)
-            
+
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            
+
             log.info("time_machine_agent.completed", duration_ms=duration_ms)
-            
+
             history = state.get("agent_history", [])
             history.append(self.AGENT_NAME)
-            
+
             return {
                 "agent_history": history,
                 "time_machine_result": content,

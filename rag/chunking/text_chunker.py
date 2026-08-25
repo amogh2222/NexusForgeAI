@@ -3,7 +3,6 @@ NexusForge AI — Text File Chunker
 Sliding window chunker for non-code files (Markdown, YAML, configs, etc.)
 """
 from pathlib import Path
-from typing import Optional
 
 import structlog
 

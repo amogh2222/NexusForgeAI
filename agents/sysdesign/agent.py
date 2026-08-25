@@ -31,26 +31,26 @@ class SysDesignAgent(BaseAgent):
     async def run(self, state: dict) -> dict:
         start_time = time.perf_counter()
         query = state.get("task_description", "")
-        
+
         log.info("sysdesign_agent.started", task=query[:50])
-        
+
         messages = [
             SystemMessage(content=self._system_prompt),
             HumanMessage(content=f"Requirement: {query}\n\nProvide the complete System Design HLD:")
         ]
-        
+
         try:
             response = await self._invoke_llm(messages)
             content = response.content if hasattr(response, "content") else str(response)
-            
+
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            
+
             # Emit logs (conceptual for now, to integrate with existing telemetry)
             log.info("sysdesign_agent.completed", duration_ms=duration_ms)
-            
+
             history = state.get("agent_history", [])
             history.append(self.AGENT_NAME)
-            
+
             return {
                 "agent_history": history,
                 "sysdesign_result": content,

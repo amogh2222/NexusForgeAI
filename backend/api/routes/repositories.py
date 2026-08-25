@@ -2,22 +2,20 @@
 import os
 import uuid
 from typing import Annotated, Optional
+from datetime import datetime
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.dependencies import CurrentUser
-from backend.models import Repository, IndexingStatus, RepoSourceType
+from backend.models import Repository
 from backend.services.repository_service import RepositoryService
 
 router = APIRouter()
-
-
-from datetime import datetime
 
 
 class RepositoryResponse(BaseModel):

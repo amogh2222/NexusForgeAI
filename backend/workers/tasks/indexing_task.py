@@ -9,7 +9,6 @@ import time
 import zipfile
 from pathlib import Path
 from typing import Optional
-from uuid import UUID
 
 import redis
 import structlog
@@ -69,7 +68,6 @@ def index_repository(
     5. Update repository status in PostgreSQL
     6. Publish progress events via Redis
     """
-    import asyncio
     import torch
     torch.set_num_threads(4)
     from sqlalchemy import create_engine

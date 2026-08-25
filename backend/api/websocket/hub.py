@@ -4,8 +4,7 @@ Per-project room-based broadcasting with typed event payloads.
 """
 import json
 from collections import defaultdict
-from typing import Any, Optional
-from uuid import UUID
+from typing import Optional
 
 import structlog
 from fastapi import WebSocket

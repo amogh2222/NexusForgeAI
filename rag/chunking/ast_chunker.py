@@ -3,8 +3,7 @@ NexusForge AI — AST-Based Code Chunker
 Uses tree-sitter to chunk code at function/class boundaries.
 Research-validated: DO NOT use RecursiveCharacterTextSplitter on code.
 """
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -129,7 +128,6 @@ class ASTChunker:
     def _extract_chunks(self, tree, content: str, file_path: str, language: str) -> list[CodeChunk]:
         """Walk the AST and extract meaningful chunks."""
         chunks = []
-        lines = content.split("\n")
 
         # Node types to extract per language
         target_types = {

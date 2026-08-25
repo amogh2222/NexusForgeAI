@@ -4,7 +4,6 @@ Distributed agent orchestration via Apache Kafka.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import structlog
 from typing import Any, Callable
@@ -13,7 +12,7 @@ log = structlog.get_logger()
 
 class KafkaEventStream:
     """Pub/Sub mechanism for agent state transitions using aiokafka."""
-    
+
     def __init__(self, bootstrap_servers: str = "localhost:9092"):
         self._bootstrap_servers = bootstrap_servers
         self._producer = None
@@ -47,7 +46,7 @@ class KafkaEventStream:
         if not self._producer:
             log.debug("kafka.publish_skipped", reason="no_producer")
             return
-            
+
         message = {
             "type": event_type,
             "payload": payload
@@ -58,14 +57,14 @@ class KafkaEventStream:
         if not self._consumer:
             log.debug("kafka.consume_skipped", reason="no_consumer")
             return
-            
+
         try:
             async for msg in self._consumer:
                 data = json.loads(msg.value.decode('utf-8'))
                 await handler(data.get("type"), data.get("payload"))
         except Exception as e:
             log.error("kafka.consume_loop_error", error=str(e))
-            
+
     async def stop(self):
         if self._producer:
             await self._producer.stop()

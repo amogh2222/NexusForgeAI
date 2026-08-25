@@ -65,7 +65,7 @@ class RepositoryService:
         if not match:
             raise ValueError(f"Invalid GitHub URL: {github_url}")
 
-        owner, repo_name = match.group(1), match.group(2)
+        _, repo_name = match.group(1), match.group(2)
         clone_dir = os.path.join(settings.UPLOAD_DIR, str(uuid.uuid4()), repo_name)
         os.makedirs(os.path.dirname(clone_dir), exist_ok=True)
 

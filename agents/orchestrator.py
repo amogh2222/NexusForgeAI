@@ -3,8 +3,7 @@ NexusForge AI — LangGraph Multi-Agent Orchestrator
 StateGraph with Supervisor pattern + PostgresSaver checkpoints.
 Research-validated: PostgresSaver (NOT MemorySaver) for production.
 """
-import time
-from typing import Annotated, Any, Optional, TypedDict
+from typing import Annotated, Optional, TypedDict
 
 import structlog
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -309,10 +308,10 @@ class NexusOrchestrator:
             parts.append(f"🐛 **Debug Complete**: {state['debug_report'].get('root_cause', 'Issue identified')}")
 
         if state.get("sysdesign_result"):
-            parts.append(f"🏗️ **System Design Complete**: Generated HLD")
+            parts.append("🏗️ **System Design Complete**: Generated HLD")
 
         if state.get("time_machine_result"):
-            parts.append(f"⏳ **Time Machine Analysis Complete**: Analyzed architectural drift")
+            parts.append("⏳ **Time Machine Analysis Complete**: Analyzed architectural drift")
 
         if not parts:
             parts.append("✅ Task complete")

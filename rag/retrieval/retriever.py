@@ -11,7 +11,6 @@ from typing import Optional
 
 import structlog
 
-from backend.core.config import settings
 from rag.embeddings.embedder import EmbeddingService
 from rag.embeddings.sparse_embedder import SparseEmbeddingService
 from rag.vector_store.qdrant_store import QdrantStore

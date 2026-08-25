@@ -4,13 +4,11 @@ Abstract base class for all 6 specialized agents.
 Provides: LLM binding (Ollama + OpenAI fallback), RAG injection,
 WebSocket event emission, retry logic, and token tracking.
 """
-import time
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 import structlog
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, SystemMessage
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from backend.core.config import settings

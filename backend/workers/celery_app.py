@@ -25,27 +25,27 @@ celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
-    
+
     # Timeouts
     task_soft_time_limit=settings.CELERY_TASK_TIMEOUT,
     task_time_limit=settings.CELERY_TASK_TIMEOUT + 30,
-    
+
     # Retry behavior
     task_max_retries=settings.CELERY_MAX_RETRIES,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-    
+
     # Queue configuration
     task_routes={
         "backend.workers.tasks.indexing_task.*": {"queue": "indexing"},
         "backend.workers.tasks.agent_task.*": {"queue": "agents"},
         "backend.workers.tasks.execution_task.*": {"queue": "execution"},
     },
-    
+
     # Worker settings
     worker_prefetch_multiplier=1,   # Fair scheduling
     worker_max_tasks_per_child=100, # Prevent memory leaks
-    
+
     # Results
     result_expires=3600,
     task_track_started=True,

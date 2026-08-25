@@ -1,9 +1,7 @@
 """NexusForge AI — Auth Routes"""
-from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,6 +112,5 @@ async def get_current_user_info(
     credentials=Depends(__import__("fastapi.security", fromlist=["HTTPBearer"]).HTTPBearer()),
 ):
     """Get the current authenticated user's profile."""
-    from backend.core.dependencies import get_current_user
     # Delegated to dependency
     raise HTTPException(status_code=501, detail="Use /api/auth/me with proper auth")

@@ -44,7 +44,7 @@ async def list_projects(
 ):
     result = await db.execute(
         select(Project)
-        .where(Project.user_id == current_user.id, Project.is_archived == False)
+        .where(Project.user_id == current_user.id, Project.is_archived.is_(False))
         .offset(pagination.skip)
         .limit(pagination.limit)
         .order_by(Project.created_at.desc())

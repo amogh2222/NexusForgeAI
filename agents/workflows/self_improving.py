@@ -15,10 +15,9 @@ so the frontend ThoughtPipeline shows live progress.
 """
 from __future__ import annotations
 
-import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Literal, Optional
+from typing import AsyncIterator, Literal, Optional
 
 import structlog
 from langgraph.graph import END, StateGraph
@@ -133,7 +132,7 @@ async def generate_node(state: SelfImprovingState) -> dict:
 async def execute_node(state: SelfImprovingState) -> dict:
     """EXECUTE: Run generated code in sandbox."""
     from sandbox.firecracker_isolator import FirecrackerIsolator
-    
+
     isolator = FirecrackerIsolator()
     code = state["generated_code"]
     language = state["language"]

@@ -3,6 +3,9 @@
 # ──────────────────────────────────────────────────────────────────
 # chat.py
 # ──────────────────────────────────────────────────────────────────
+from pydantic import BaseModel
+from typing import Optional, List
+from backend.core.dependencies import CurrentUser, DBSession
 from fastapi import APIRouter as _APIRouter
 
 chat_router = _APIRouter()
@@ -11,9 +14,6 @@ memory_router = _APIRouter()
 executions_router = _APIRouter()
 
 # ─── Chat ──────────────────────────────────────────────────────────
-from pydantic import BaseModel
-from typing import Optional, List
-from backend.core.dependencies import CurrentUser, DBSession
 
 
 class ChatMessageRequest(BaseModel):
@@ -54,7 +54,7 @@ async def send_chat_message(
 @chat_router.get("/{thread_id}/history", response_model=List[ChatMessageResponse])
 async def get_chat_history(thread_id: str, current_user: CurrentUser, db: DBSession):
     """Get chat history for a thread."""
-    from sqlalchemy import select, and_
+    from sqlalchemy import select
     from backend.models import Chat
     result = await db.execute(
         select(Chat).where(Chat.thread_id == thread_id).order_by(Chat.created_at.asc()).limit(100)
@@ -133,7 +133,7 @@ async def create_execution(
 ):
     """Submit code for sandbox execution."""
     import uuid
-    from backend.models import Execution, ExecutionStatus, ExecutionRuntime
+    from backend.models import Execution, ExecutionStatus
 
     execution = Execution(
         id=uuid.uuid4(),

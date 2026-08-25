@@ -3,7 +3,6 @@ NexusForge AI — BGE Embedding Service
 Singleton pattern: loaded once at startup, never per-task.
 Research-validated: normalize_embeddings=True + query prefix required for BGE.
 """
-import hashlib
 from typing import Optional
 
 import structlog
@@ -14,7 +13,7 @@ log = structlog.get_logger()
 class EmbeddingService:
     """
     Singleton embedding service using BAAI/bge-base-en-v1.5.
-    
+
     CRITICAL RULES (from research):
     1. normalize_embeddings=True REQUIRED for cosine similarity
     2. Query prefix REQUIRED for retrieval queries (not for documents)
@@ -26,7 +25,6 @@ class EmbeddingService:
 
     def __init__(self, model_name: str = "BAAI/bge-base-en-v1.5", max_seq_length: int = 512):
         from sentence_transformers import SentenceTransformer
-        from backend.core.config import settings
 
         self.model_name = model_name
         self.max_seq_length = max_seq_length

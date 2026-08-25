@@ -220,7 +220,7 @@ async def explain_code(body: ExplainRequest):
     Used by Monaco keyboard shortcut Ctrl+Shift+E.
     """
     from agents.router.model_router import ModelRouter, TaskType
-    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_core.messages import HumanMessage
 
     llm = ModelRouter.get_instance().get_langchain_llm(TaskType.DOCS)
 
