@@ -184,7 +184,7 @@ services:
   # ──────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile.frontend
     container_name: nexusforge_frontend
     restart: unless-stopped
