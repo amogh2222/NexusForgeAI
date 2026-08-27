@@ -1,164 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
-import { Github, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import React from "react";
+import { Github } from "lucide-react";
 
 export function AuthForms() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
   const handleGithubLogin = () => {
     // Redirect to backend GitHub OAuth endpoint
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
     window.location.href = `${API_URL}/auth/github/login`;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (isLogin) {
-        await api.auth.login({ email, password });
-      } else {
-        await api.auth.register({
-          email,
-          username,
-          password,
-        });
-        await api.auth.login({ email, password });
-      }
-      // On success, redirect to home
-      window.location.href = "/";
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="glass p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+      <div className="glass p-8 rounded-3xl shadow-2xl relative overflow-hidden text-center">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />
         
-        <div className="text-center mb-8">
+        <div className="mb-8 mt-4">
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
-            {isLogin ? "Welcome Back" : "Create Account"}
+            Welcome to NexusForge
           </h2>
           <p className="text-slate-500 text-sm">
-            {isLogin ? "Sign in to access your AI engineering workspaces" : "Join NexusForge to autonomously scale your codebase"}
+            Sign in with GitHub to access your workspaces and repositories.
           </p>
         </div>
 
         <button 
           onClick={handleGithubLogin}
           type="button"
-          className="w-full mb-6 flex items-center justify-center gap-3 bg-slate-900 text-white rounded-xl py-3 px-4 hover:bg-slate-800 transition-all shadow-md hover:shadow-lg"
+          className="w-full mb-4 flex items-center justify-center gap-3 bg-slate-900 text-white rounded-xl py-4 px-6 hover:bg-slate-800 transition-all shadow-md hover:shadow-lg text-lg"
         >
-          <Github size={20} />
+          <Github size={24} />
           <span className="font-medium">Continue with GitHub</span>
         </button>
-
-        <div className="relative flex items-center py-4 mb-2">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">OR</span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0 }}
-              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm"
-            >
-              <AlertCircle size={16} />
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <User size={18} />
-                </div>
-                <input 
-                  type="text" 
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white/50 text-slate-900" 
-                  placeholder="Username" 
-                />
-              </div>
-            </motion.div>
-          )}
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Mail size={18} />
-            </div>
-            <input 
-              type="email" 
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white/50 text-slate-900" 
-              placeholder="Email Address" 
-            />
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Lock size={18} />
-            </div>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white/50 text-slate-900" 
-              placeholder="Password" 
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={isLoading || !email || !password || (!isLogin && !username)}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl py-3 px-4 hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-70 mt-2"
-          >
-            {isLoading ? <Loader2 size={20} className="animate-spin" /> : (
-              <>
-                <span className="font-semibold">{isLogin ? "Sign In" : "Create Account"}</span>
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-slate-500">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button 
-            onClick={() => { setIsLogin(!isLogin); setError(null); }}
-            className="text-indigo-600 font-semibold hover:underline"
-          >
-            {isLogin ? "Sign Up" : "Log In"}
-          </button>
-        </div>
+        
+        <p className="text-xs text-slate-400 mt-6">
+          Every user must authenticate via GitHub to sync their repositories and execute code autonomously.
+        </p>
       </div>
     </div>
   );
