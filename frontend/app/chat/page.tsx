@@ -6,6 +6,8 @@ import { Send, Bot, User, Settings, Play, Loader2, CheckCircle2, AlertCircle } f
 import { motion, AnimatePresence } from "framer-motion";
 import { api, getAuthToken } from "@/lib/api";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -151,9 +153,40 @@ export default function ChatPage() {
         content: userMsg.content,
         repository_id: repositoryId || undefined,
       });
-    } catch (err) {
+
+      // Poll fallback in case WS doesn't stream tokens or Celery finishes asynchronously
+      let pollCount = 0;
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        try {
+          const history = await api.chat.getHistory(threadId.current);
+          if (Array.isArray(history) && history.length > 0) {
+            const hasAgentMsg = history.some((m: any) => m.role === 'AGENT' || m.role === 'agent' || m.role === 'assistant');
+            if (hasAgentMsg) {
+              setMessages(history);
+              setIsAgentThinking(false);
+              clearInterval(pollInterval);
+            }
+          }
+        } catch (e) {
+          console.error("Polling error:", e);
+        }
+        if (pollCount > 30) {
+          setIsAgentThinking(false);
+          clearInterval(pollInterval);
+        }
+      }, 2000);
+
+    } catch (err: any) {
       console.error("Failed to send message:", err);
       setIsAgentThinking(false);
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(),
+        role: "SYSTEM",
+        content: `Error: ${err.message || 'Failed to communicate with AI agent'}. If using Gemini API, rate limits (429) may have been exceeded.`,
+        agent_name: "System",
+        created_at: new Date().toISOString()
+      }]);
     } finally {
       setIsSending(false);
     }
@@ -209,12 +242,18 @@ export default function ChatPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs text-slate-500 font-medium">{msg.agent_name || (isUser ? 'User' : 'Agent')}</span>
                   </div>
-                  <div className={`p-4 rounded-2xl whitespace-pre-wrap shadow-sm ${
+                  <div className={`p-4 rounded-2xl shadow-sm ${
                     isUser 
                       ? "bg-blue-600 text-white" 
-                      : "bg-white border border-slate-200 text-slate-800"
+                      : "bg-white border border-slate-200 text-slate-800 prose prose-sm max-w-none dark:prose-invert"
                   }`}>
-                    {msg.content}
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    ) : (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    )}
                     {msg.isStreaming && (
                       <motion.span 
                         animate={{ opacity: [1, 0, 1] }} 

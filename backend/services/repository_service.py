@@ -195,3 +195,11 @@ class RepositoryService:
             source_path=repo.local_path,
             source_type=repo.source_type,
         )
+
+    async def delete(self, repo_id: UUID, user_id: UUID):
+        """Delete a repository from the database."""
+        repo = await self.get_by_id(repo_id, user_id)
+        if not repo:
+            raise ValueError("Repository not found")
+        await self.db.delete(repo)
+        await self.db.commit()

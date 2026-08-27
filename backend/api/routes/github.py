@@ -5,11 +5,11 @@ Handles fetching GitHub repositories for the authenticated user.
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 import structlog
-from backend.core.security import get_current_user
+from backend.core.dependencies import get_current_user
 from backend.models import User
 
 log = structlog.get_logger()
-router = APIRouter(prefix="/github", tags=["github"])
+router = APIRouter(tags=["github"])
 
 @router.get("/repos")
 async def get_github_repos(user: User = Depends(get_current_user)):

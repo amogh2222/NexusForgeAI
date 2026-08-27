@@ -120,6 +120,11 @@ export const api = {
     },
     list(projectId: string) {
       return fetchAPI(`/repos/?project_id=${projectId}`);
+    },
+    delete(repoId: string) {
+      return fetchAPI(`/repos/${repoId}`, {
+        method: "DELETE",
+      });
     }
   },
   chat: {
@@ -141,7 +146,7 @@ export const api = {
   },
   intelligence: {
     getSystemDesign(data: { project_id: string, scale: string }) {
-      return fetchAPI("/intelligence/system-design", {
+      return fetchAPI("/intelligence/design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -163,6 +168,18 @@ export const api = {
     },
     get(executionId: string) {
       return fetchAPI(`/executions/${executionId}`);
+    }
+  },
+  evaluation: {
+    runBenchmark(data: { suite_id: string, project_id: string, case_ids?: string[] }) {
+      return fetchAPI("/evaluation/benchmark/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    },
+    getStatus(suiteId: string) {
+      return fetchAPI(`/evaluation/benchmark/status/${suiteId}`);
     }
   }
 };

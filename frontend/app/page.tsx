@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { FileUp, GitBranch, Terminal, Database, Activity, Code, Clock } from "lucide-react";
+import { FileUp, GitBranch, Terminal, Database, Activity, Code, Clock, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { GithubModal, ZipUploadModal } from "@/components/IngestionModals";
 import { api, getAuthToken } from "@/lib/api";
@@ -14,6 +14,19 @@ export default function Home() {
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+
+  const handleDeleteRepo = async (repoId: string, repoName: string) => {
+    if (!confirm(`Are you sure you want to delete repository "${repoName}"?`)) return;
+    try {
+      await api.repositories.delete(repoId);
+      if (projectId) {
+        const repos = await api.repositories.list(projectId);
+        setRepositories(repos || []);
+      }
+    } catch (err: any) {
+      alert("Failed to delete repository: " + (err.message || err));
+    }
+  };
 
   // WebSocket for Real-Time Indexing Progress
   const { isConnected, lastEvent } = useWebSocket(projectId);
@@ -250,13 +263,22 @@ export default function Home() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-sm font-medium text-slate-900 truncate">{repo.name}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            repo.indexed_status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                            repo.indexed_status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                            'bg-amber-100 text-amber-700 animate-pulse'
-                          }`}>
-                            {repo.indexed_status}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              repo.indexed_status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                              repo.indexed_status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700 animate-pulse'
+                            }`}>
+                              {repo.indexed_status}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteRepo(repo.id, repo.name)}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                              title="Delete Repository"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-slate-500">
                           <span className="flex items-center gap-1"><Code size={12} /> {repo.total_files} files</span>

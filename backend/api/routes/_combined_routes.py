@@ -5,6 +5,8 @@
 # ──────────────────────────────────────────────────────────────────
 from pydantic import BaseModel
 from typing import Optional, List
+from uuid import UUID
+from datetime import datetime
 from backend.core.dependencies import CurrentUser, DBSession
 from fastapi import APIRouter as _APIRouter
 
@@ -24,11 +26,11 @@ class ChatMessageRequest(BaseModel):
 
 
 class ChatMessageResponse(BaseModel):
-    id: str
+    id: UUID
     role: str
     content: str
     agent_name: Optional[str]
-    created_at: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 

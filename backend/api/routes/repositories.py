@@ -174,3 +174,15 @@ async def reindex_repository(
     repo_service = RepositoryService(db)
     await repo_service.trigger_reindex(uuid.UUID(repo_id), current_user.id)
     return {"message": "Re-indexing started", "repository_id": repo_id}
+
+
+@router.delete("/{repo_id}")
+async def delete_repository(
+    repo_id: str,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Delete a repository."""
+    repo_service = RepositoryService(db)
+    await repo_service.delete(uuid.UUID(repo_id), current_user.id)
+    return {"message": "Repository deleted successfully"}

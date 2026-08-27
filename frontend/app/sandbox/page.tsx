@@ -40,6 +40,7 @@ export default function SandboxPage() {
     setIsRunning(true);
     setOutput("Initializing Sandbox...\nExecuting code...\n");
     
+    let seconds = 0;
     try {
       const res = await api.executions.create({
         project_id: projectId,
@@ -51,6 +52,7 @@ export default function SandboxPage() {
       
       // Poll for result
       const poll = async () => {
+        seconds += 1;
         try {
           const status = await api.executions.get(executionId);
           if (status.status === "success" || status.status === "failed" || status.status === "error" || status.status === "timeout") {
@@ -59,14 +61,20 @@ export default function SandboxPage() {
             if (status.stderr) finalOutput += status.stderr + "\n";
             if (!status.stdout && !status.stderr) finalOutput += `Exited with code ${status.exit_code}\n`;
             
-            finalOutput += `\nExecution finished in ${status.duration_ms}ms.`;
+            finalOutput += `\nExecution finished in ${status.duration_ms || 0}ms.`;
             setOutput(finalOutput);
             setIsRunning(false);
           } else {
-            setTimeout(poll, 1000);
+            setOutput(`[Status: ${status.status || 'queued'}] Waiting for isolated Docker container (${seconds}s)...\nTip: If Celery is busy with embeddings, this will execute shortly.`);
+            if (seconds < 60) {
+              setTimeout(poll, 1000);
+            } else {
+              setOutput("Execution timed out after 60s. Celery workers may be busy.");
+              setIsRunning(false);
+            }
           }
-        } catch (e) {
-          setOutput("Error polling execution status.");
+        } catch (e: any) {
+          setOutput(`Error polling execution status: ${e.message || e}`);
           setIsRunning(false);
         }
       };
@@ -89,6 +97,11 @@ export default function SandboxPage() {
             <div className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium">
               Python 3.11
             </div>
+            {!projectId && (
+              <div className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 border border-red-200 font-medium">
+                No Active Project
+              </div>
+            )}
           </div>
           <button 
             onClick={handleRun}
