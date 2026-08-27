@@ -60,11 +60,24 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-4 mt-auto">
+      <div className="px-4 mt-auto space-y-2">
         <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
           <Settings size={18} className="text-slate-400" />
           Settings
         </button>
+        
+        {/* User Profile */}
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+              AM
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-slate-900 leading-none">Amogh</span>
+              <span className="text-xs text-slate-500 mt-1">amogh2222@github</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -278,6 +278,14 @@ and exact pricing estimates ($X/month at scale).
         if current_key and current_lines:
             sections[current_key] = "\n".join(current_lines).strip()
 
+        # Clean all sections from markdown code block backticks
+        import re
+        for k, v in sections.items():
+            # Strip ```text or ``` from beginning, and ``` from end
+            cleaned = re.sub(r"^```[a-zA-Z]*\n?", "", v, flags=re.MULTILINE)
+            cleaned = re.sub(r"\n?```$", "", cleaned, flags=re.MULTILINE)
+            sections[k] = cleaned.strip()
+
         return sections
 
     def _generate_mermaid(self, context: dict, preset: dict) -> str:

@@ -95,6 +95,24 @@ Sources:
 ---
 """
 
+    def _clean_llm_output(self, text: str) -> str:
+        """Strip markdown blocks, dashes, and conversational filler from LLM output."""
+        if not text: return ""
+        lines = text.splitlines()
+        cleaned_lines = []
+        in_code_block = False
+        for line in lines:
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue # Skip the backticks
+            if line.strip() == "---":
+                continue # Skip dashes
+            # Skip conversational filler if not in a code block
+            if not in_code_block and line.lower().startswith("here is the"):
+                continue
+            cleaned_lines.append(line)
+        return "\n".join(cleaned_lines).strip()
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -108,7 +126,15 @@ Sources:
             llm_with_schema = llm.with_structured_output(structured_output_schema)
             return await llm_with_schema.ainvoke(messages)
 
-        return await llm.ainvoke(messages)
+        resp = await llm.ainvoke(messages)
+        content = resp.content if hasattr(resp, "content") else str(resp)
+        if isinstance(content, list):
+             text_blocks = [b.get("text", "") for b in content if isinstance(b, dict) and "text" in b]
+             content = "".join(text_blocks) if text_blocks else str(content)
+        cleaned_content = self._clean_llm_output(content)
+        if hasattr(resp, "content"):
+            resp.content = cleaned_content
+        return resp
 
     def _emit_agent_start(self, state: dict, action: str) -> dict:
         """Return agent start event payload for WebSocket broadcast."""
