@@ -191,13 +191,9 @@ class NexusOrchestrator:
         graph.add_edge("time_machine", "finalizer")
         graph.add_edge("finalizer", END)
 
-        # ─── Compile with PostgresSaver checkpoint ────────────────
-        # Research-validated: PostgresSaver survives restarts
-        checkpointer = await AsyncPostgresSaver.from_conn_string(
-            settings.DATABASE_SYNC_URL.replace("+asyncpg", "").replace("postgresql", "postgresql")
-        )
-        await checkpointer.setup()
-
+        # ─── Compile with MemorySaver checkpoint ────────────────
+        from langgraph.checkpoint.memory import MemorySaver
+        checkpointer = MemorySaver()
         return graph.compile(checkpointer=checkpointer)
 
     async def get_graph(self) -> CompiledStateGraph:

@@ -44,7 +44,7 @@ export default function SandboxPage() {
       const poll = async () => {
         try {
           const status = await api.executions.get(executionId);
-          if (status.status === "COMPLETED" || status.status === "FAILED") {
+          if (status.status === "success" || status.status === "failed" || status.status === "error" || status.status === "timeout") {
             let finalOutput = "";
             if (status.stdout) finalOutput += status.stdout + "\n";
             if (status.stderr) finalOutput += status.stderr + "\n";

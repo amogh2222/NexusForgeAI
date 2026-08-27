@@ -204,7 +204,7 @@ async def query_architecture_graph(body: GraphQueryRequest):
     return {"result": result}
 
 
-@router.post("/system-design")
+@router.post("/design")
 async def generate_system_design(body: SystemDesignRequest):
     """
     Generate a production-grade system design document for scaling the repository.

@@ -64,28 +64,19 @@ def run_agent_pipeline(
             sync_engine = create_engine(settings.DATABASE_SYNC_URL)
             Session = sessionmaker(bind=sync_engine)
             with Session() as session:
-                # Save user message
-                user_chat = Chat(
-                    id=uuid_mod.uuid4(),
-                    project_id=project_id,
-                    thread_id=thread_id,
-                    role="user",
-                    content=content,
-                )
-                session.add(user_chat)
-
                 # Save final assistant response
-                msgs = final_state.get("messages", [])
-                for msg in msgs:
-                    if hasattr(msg, "type") and msg.type == "ai":
-                        assistant_chat = Chat(
-                            id=uuid_mod.uuid4(),
-                            project_id=project_id,
-                            thread_id=thread_id,
-                            role="assistant",
-                            content=msg.content,
-                        )
-                        session.add(assistant_chat)
+                import uuid
+                role_map = {"human": "USER", "ai": "ASSISTANT", "system": "SYSTEM"}
+                for msg in final_state["messages"]:
+                    chat_msg = Chat(
+                        id=uuid_mod.uuid4(),
+                        project_id=uuid.UUID(str(project_id)),
+                        thread_id=thread_id,
+                        role=role_map.get(msg.type, "AGENT"),
+                        content=msg.content,
+                        agent_name=getattr(msg, "name", None),
+                    )
+                    session.add(chat_msg)
                 session.commit()
             sync_engine.dispose()
 
