@@ -282,8 +282,9 @@ export default function Home() {
                 )}
               </div>
             </div>
+          </div>
 
-            <div className="glass rounded-2xl p-6 h-fit shadow-lg">
+          <div className="glass rounded-2xl p-6 h-fit shadow-lg">
               <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
                 <Database size={20} className="text-blue-500" />
                 System Status
