@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { getAuthToken } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-const WS_BASE = API_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+// Remove /api/v1 since WebSocket is mounted at the root /ws
+const WS_BASE = API_URL.replace('http://', 'ws://').replace('https://', 'wss://').replace('/api/v1', '');
 
 export interface WSEvent {
   type: string;
