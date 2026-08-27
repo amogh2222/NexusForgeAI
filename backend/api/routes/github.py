@@ -32,7 +32,7 @@ async def get_github_repos(user: User = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="Failed to fetch repositories from GitHub")
 
         repos_data = resp.json()
-        
+
         # Format the response for the frontend
         formatted_repos = []
         for repo in repos_data:

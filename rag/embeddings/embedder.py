@@ -27,7 +27,7 @@ class EmbeddingService:
         self.model_name = model_name
         self.max_seq_length = max_seq_length
         self.model = None
-        
+
         try:
             from sentence_transformers import SentenceTransformer
             log.info("embeddings.loading", model=model_name)
@@ -59,7 +59,7 @@ class EmbeddingService:
         if self.model is None:
             # Mock embeddings for fast testing
             return [[0.1] * 768 for _ in texts]
-            
+
         log.info("embeddings.embed_documents", count=len(texts), batch_size=batch_size)
         embeddings = self.model.encode(
             texts,
@@ -77,7 +77,7 @@ class EmbeddingService:
         """
         if self.model is None:
             return [0.1] * 768
-            
+
         prefixed_query = f"{self.QUERY_PREFIX}{query}"
         embedding = self.model.encode(
             [prefixed_query],

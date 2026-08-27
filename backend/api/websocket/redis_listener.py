@@ -34,7 +34,7 @@ class RedisListener:
 
         # We subscribe to the pattern used by Celery tasks: nexusforge:ws:*
         await self.pubsub.psubscribe("nexusforge:ws:*")
-        
+
         self._task = asyncio.create_task(self._listen_loop())
         log.info("redis_listener.started", pattern="nexusforge:ws:*")
 

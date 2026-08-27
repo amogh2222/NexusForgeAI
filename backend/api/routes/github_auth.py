@@ -68,7 +68,7 @@ async def github_callback(code: str, request: Request):
         )
         if user_resp.status_code != 200:
             raise HTTPException(status_code=500, detail="Failed to fetch GitHub profile")
-        
+
         gh_user = user_resp.json()
         gh_id = str(gh_user.get("id"))
         gh_username = gh_user.get("login")
@@ -78,7 +78,6 @@ async def github_callback(code: str, request: Request):
         from backend.core.database import get_db
         from backend.models import User
         from sqlalchemy import select
-        from sqlalchemy.ext.asyncio import AsyncSession
         from backend.core.security import create_access_token
 
         async for db in get_db():
@@ -118,7 +117,7 @@ async def github_callback(code: str, request: Request):
 
             # Generate JWT Token
             jwt_token = create_access_token(str(user.id))
-            
+
             # Redirect back to frontend
             # In production, use NEXT_PUBLIC_FRONTEND_URL. For now, localhost:3000
             frontend_url = "http://localhost:3000"

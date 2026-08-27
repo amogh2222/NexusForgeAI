@@ -97,7 +97,8 @@ Sources:
 
     def _clean_llm_output(self, text: str) -> str:
         """Strip markdown blocks, dashes, and conversational filler from LLM output."""
-        if not text: return ""
+        if not text:
+            return ""
         lines = text.splitlines()
         cleaned_lines = []
         in_code_block = False

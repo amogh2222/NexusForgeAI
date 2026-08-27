@@ -68,11 +68,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         log.info("nexusforge.neo4j_connected", uri=settings.NEO4J_URI)
     except Exception as e:
         log.error("nexusforge.neo4j_connection_failed", error=str(e))
-        
+
     # Initialize LLM Router
     from agents.router.model_router import ModelRouter
     ModelRouter.get_instance()
-    log.info("model_router.initialized", 
+    log.info("model_router.initialized",
              openai=settings.OPENAI_API_KEY is not None,
              ollama=settings.OLLAMA_BASE_URL,
              vllm="disabled")
@@ -87,13 +87,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     # Shutdown
     log.info("nexusforge.shutdown")
-    
+
     try:
         from backend.api.websocket.redis_listener import redis_listener
         await redis_listener.stop()
     except Exception as e:
         log.error("nexusforge.redis_listener_stop_failed", error=str(e))
-        
+
     await engine.dispose()
     neo4j_inst = Neo4jClient.get_instance()
     await neo4j_inst.close()

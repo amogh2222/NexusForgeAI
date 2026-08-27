@@ -67,11 +67,11 @@ def run_agent_pipeline(
                 # Save final assistant response
                 import uuid
                 role_map = {"human": "USER", "ai": "ASSISTANT", "system": "SYSTEM"}
-                
+
                 # Count existing messages for this thread to avoid duplicates
                 existing_count = session.query(Chat).filter_by(thread_id=thread_id).count()
                 new_messages = final_state["messages"][existing_count:]
-                
+
                 for msg in new_messages:
                     chat_msg = Chat(
                         id=uuid_mod.uuid4(),

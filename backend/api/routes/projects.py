@@ -1,5 +1,6 @@
 """NexusForge AI — Projects Routes"""
 import uuid
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -25,7 +26,6 @@ class ProjectUpdate(BaseModel):
     color: Optional[str] = None
 
 
-from datetime import datetime
 class ProjectResponse(BaseModel):
     id: UUID
     name: str

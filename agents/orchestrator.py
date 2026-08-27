@@ -7,12 +7,10 @@ from typing import Annotated, Optional, TypedDict
 
 import structlog
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, StateGraph, add_messages
 from langgraph.graph.state import CompiledStateGraph
 
 from backend.api.websocket.events import AgentEndEvent, AgentStartEvent
-from backend.core.config import settings
 
 log = structlog.get_logger()
 
