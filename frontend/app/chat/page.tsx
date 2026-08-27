@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { Send, Bot, User, Settings, Play, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { Send, Bot, User, Settings, Play, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -12,16 +13,29 @@ export default function ChatPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [agentLogs, setAgentLogs] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isAgentThinking, setIsAgentThinking] = useState(false);
   const threadId = useRef(`thread-${Math.random().toString(36).substring(7)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize Project
+  // WebSocket Integration
+  const { isConnected, lastEvent } = useWebSocket(projectId, threadId.current);
+
+  // Initialize Project and load initial history
   useEffect(() => {
     async function init() {
       try {
         const projects = await api.projects.list();
         if (projects && projects.length > 0) {
-          setProjectId(projects[0].id);
+          const pid = projects[0].id;
+          setProjectId(pid);
+          
+          // Initial load
+          const [history, logs] = await Promise.all([
+            api.chat.getHistory(threadId.current),
+            api.agents.getLogs(pid, 20)
+          ]);
+          if (history && history.length > 0) setMessages(history);
+          if (logs) setAgentLogs(logs);
         }
       } catch (err) {
         console.error("Failed to load project:", err);
@@ -30,33 +44,65 @@ export default function ChatPage() {
     init();
   }, []);
 
-  // Poll Chat History & Agent Logs
+  // Handle Real-Time WebSocket Events
   useEffect(() => {
-    if (!projectId) return;
+    if (!lastEvent) return;
 
-    async function pollData() {
-      try {
-        const [history, logs] = await Promise.all([
-          api.chat.getHistory(threadId.current),
-          api.agents.getLogs(projectId as string, 20)
-        ]);
-        if (history && history.length > 0) {
-          setMessages(history);
+    if (lastEvent.type === 'token') {
+      setIsAgentThinking(false);
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role.toLowerCase() !== 'user' && lastMsg.isStreaming) {
+          // Append to existing streaming message
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...lastMsg,
+            content: lastMsg.content + lastEvent.content,
+            agent_name: lastEvent.agent_name || lastMsg.agent_name
+          };
+          return updated;
+        } else {
+          // Create new streaming message
+          return [...prev, {
+            id: Math.random().toString(),
+            role: 'ASSISTANT',
+            content: lastEvent.content,
+            agent_name: lastEvent.agent_name || 'Agent',
+            isStreaming: true
+          }];
         }
-        if (logs) setAgentLogs(logs);
-      } catch (err) {
-        // ignore polling errors
-      }
+      });
+    } else if (lastEvent.type === 'agent_start') {
+      setIsAgentThinking(true);
+      setAgentLogs(prev => [{
+        id: Math.random().toString(),
+        agent_name: lastEvent.agent_name,
+        action: lastEvent.action,
+        status: 'running',
+        created_at: new Date().toISOString()
+      }, ...prev].slice(0, 20));
+    } else if (lastEvent.type === 'agent_end') {
+      setAgentLogs(prev => prev.map(log => 
+        log.agent_name === lastEvent.agent_name && log.status === 'running'
+          ? { ...log, status: 'success', output_summary: lastEvent.output_summary }
+          : log
+      ));
+      // End streaming state for the last message
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.isStreaming = false;
+        }
+        return updated;
+      });
+      setIsAgentThinking(false);
     }
-
-    pollData();
-    const interval = setInterval(pollData, 3000);
-    return () => clearInterval(interval);
-  }, [projectId]);
+  }, [lastEvent]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isAgentThinking]);
 
   const handleSend = async () => {
     if (!input.trim() || !projectId) return;
@@ -65,6 +111,7 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsSending(true);
+    setIsAgentThinking(true);
     
     try {
       await api.chat.sendMessage({
@@ -72,9 +119,9 @@ export default function ChatPage() {
         thread_id: threadId.current,
         content: userMsg.content,
       });
-      // Polling will catch the response
     } catch (err) {
       console.error("Failed to send message:", err);
+      setIsAgentThinking(false);
     } finally {
       setIsSending(false);
     }
@@ -87,8 +134,20 @@ export default function ChatPage() {
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 shadow-sm">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg">Agent Workspace</h2>
-            <div className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              Active Project: {projectId ? "Connected" : "Loading..."}
+            <div className="flex gap-2 items-center">
+              <div className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
+                Active Project: {projectId ? "Connected" : "Loading..."}
+              </div>
+              {isConnected ? (
+                <div className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                  WS Connected
+                </div>
+              ) : (
+                <div className="px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                  WS Connecting...
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -124,11 +183,40 @@ export default function ChatPage() {
                       : "bg-white border border-slate-200 text-slate-800"
                   }`}>
                     {msg.content}
+                    {msg.isStreaming && (
+                      <motion.span 
+                        animate={{ opacity: [1, 0, 1] }} 
+                        transition={{ repeat: Infinity, duration: 0.8 }}
+                        className="inline-block w-1.5 h-4 ml-1 bg-slate-400 translate-y-1"
+                      />
+                    )}
                   </div>
                 </div>
               </motion.div>
             );
           })}
+          
+          {isAgentThinking && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-4 max-w-4xl"
+            >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-purple-600">
+                <Bot size={16} className="text-white" />
+              </div>
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-slate-500 font-medium">Agent</span>
+                </div>
+                <div className="p-4 rounded-2xl shadow-sm bg-white border border-slate-200 text-slate-800 flex gap-1">
+                  <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                  <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                  <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                </div>
+              </div>
+            </motion.div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 

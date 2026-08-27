@@ -6,6 +6,7 @@ import { FileUp, GitBranch, Terminal, Database, Activity, Code, Clock } from "lu
 import { motion } from "framer-motion";
 import { GithubModal, ZipUploadModal } from "@/components/IngestionModals";
 import { api, getAuthToken } from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function Home() {
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -13,6 +14,15 @@ export default function Home() {
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // WebSocket for Real-Time Indexing Progress
+  const { isConnected, lastEvent } = useWebSocket(projectId);
+  const [indexingState, setIndexingState] = useState<{
+    status: 'idle' | 'running' | 'complete';
+    progress: number;
+    currentFile: string;
+    totalFiles: number;
+  }>({ status: 'idle', progress: 0, currentFile: '', totalFiles: 0 });
 
   // Initialize Auth & Project
   useEffect(() => {
@@ -72,13 +82,38 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [projectId]);
 
+  // Handle Real-Time WebSocket Events
+  useEffect(() => {
+    if (!lastEvent) return;
+
+    if (lastEvent.type === 'indexing_start') {
+      setIndexingState(prev => ({ ...prev, status: 'running', progress: 0 }));
+    } else if (lastEvent.type === 'indexing_progress') {
+      setIndexingState({
+        status: 'running',
+        progress: lastEvent.progress,
+        currentFile: lastEvent.current_file || '',
+        totalFiles: lastEvent.total_files || 0
+      });
+    } else if (lastEvent.type === 'indexing_complete' || lastEvent.type === 'indexing_error') {
+      setIndexingState(prev => ({ ...prev, status: 'complete', progress: 100 }));
+      // Refresh repositories immediately
+      if (projectId) {
+        api.repositories.list(projectId).then(setRepositories).catch(console.error);
+      }
+      setTimeout(() => setIndexingState(prev => ({ ...prev, status: 'idle' })), 5000);
+    }
+  }, [lastEvent, projectId]);
+
   const handleGithubSubmit = async (data: { url: string; branch: string }) => {
     if (!projectId) return;
+    setIndexingState({ status: 'running', progress: 0, currentFile: 'Initializing...', totalFiles: 0 });
     await api.repositories.connectGithub({ project_id: projectId, ...data });
   };
 
   const handleZipSubmit = async (file: File) => {
     if (!projectId) return;
+    setIndexingState({ status: 'running', progress: 0, currentFile: 'Uploading and extracting...', totalFiles: 0 });
     await api.repositories.uploadZip(projectId, file);
   };
 
@@ -145,14 +180,58 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 glass rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Activity size={20} className="text-indigo-500" />
-                  Repository Status
-                </h3>
-                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md">Live Polling</span>
-              </div>
+            <div className="lg:col-span-2 flex flex-col gap-8">
+              
+              {/* Real-time Indexing Progress */}
+              {indexingState.status !== 'idle' && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  className="glass rounded-2xl p-6 shadow-lg border border-blue-500/20 bg-blue-50/50"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-900">
+                      <Activity size={20} className="text-blue-500 animate-pulse" />
+                      {indexingState.status === 'running' ? 'Indexing Repository...' : 'Indexing Complete!'}
+                    </h3>
+                    <span className="text-sm font-medium text-blue-700">{indexingState.progress}%</span>
+                  </div>
+                  
+                  <div className="w-full bg-blue-100 rounded-full h-2.5 mb-3 overflow-hidden">
+                    <motion.div 
+                      className="bg-blue-600 h-2.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${indexingState.progress}%` }}
+                      transition={{ type: "spring", bounce: 0 }}
+                    ></motion.div>
+                  </div>
+                  
+                  {indexingState.status === 'running' && indexingState.currentFile && (
+                    <div className="flex justify-between items-center text-xs text-blue-600/80">
+                      <span className="truncate max-w-[70%]">Processing: {indexingState.currentFile}</span>
+                      {indexingState.totalFiles > 0 && <span>Total files: {indexingState.totalFiles}</span>}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              <div className="glass rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Database size={20} className="text-indigo-500" />
+                    Repository Database
+                  </h3>
+                  <div className="flex gap-2 items-center">
+                    {isConnected ? (
+                      <span className="text-xs bg-emerald-500/20 text-emerald-600 px-2 py-1 rounded-md flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        WebSocket Connected
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-1 rounded-md">Connecting...</span>
+                    )}
+                  </div>
+                </div>
               
               <div className="space-y-4">
                 {repositories.length === 0 ? (
