@@ -83,20 +83,20 @@ class ASTChunker:
 
             if language == "python":
                 import tree_sitter_python as ts_lang
+                lang = Language(ts_lang.language())
             elif language in ("javascript",):
                 import tree_sitter_javascript as ts_lang
+                lang = Language(ts_lang.language())
             elif language == "typescript":
                 import tree_sitter_typescript as ts_lang
-                ts_lang = ts_lang.language_typescript()
-                parser = Parser(ts_lang)
-                self._parsers[language] = parser
-                return parser
+                lang = Language(ts_lang.language_typescript())
             elif language == "go":
                 import tree_sitter_go as ts_lang
+                lang = Language(ts_lang.language())
             else:
                 return None
 
-            parser = Parser(Language(ts_lang.language()))
+            parser = Parser(lang)
             self._parsers[language] = parser
             log.info("ast_chunker.parser_loaded", language=language)
             return parser

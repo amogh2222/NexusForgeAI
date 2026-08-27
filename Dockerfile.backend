@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency manifests first (layer caching)
 COPY requirements*.txt ./
 
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt -r requirements-ml.txt
 
 # ─── Stage 2: Runtime Image ──────────────────────────────────────
 FROM python:3.11-slim AS runtime
@@ -31,6 +31,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    git \
     # For code execution sandbox: Python, Node, Go, Bash are here
     nodejs \
     npm \
@@ -52,6 +53,8 @@ COPY graph/ ./graph/
 COPY intelligence/ ./intelligence/
 COPY evaluation/ ./evaluation/
 COPY plugins/ ./plugins/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 
 # Create required directories
 RUN mkdir -p /app/data/uploads /app/data/chroma && \
@@ -65,4 +68,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--loop", "uvloop"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "uvloop"]

@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     DEFAULT_LONG_CONTEXT_MODEL: str = "gpt-4o-mini"
     LOCAL_CONTEXT_WINDOW_TOKENS: int = 8192
 
+    # ─── Gemini Fallback ──────────────────────────────────────
+    GEMINI_API_KEY: Optional[str] = None
+
     # ─── OpenAI Fallback ──────────────────────────────────────
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
@@ -95,13 +98,13 @@ class Settings(BaseSettings):
     GITHUB_REDIRECT_URI: str = "http://localhost:3000/auth/github/callback"
 
     # ─── File Storage ─────────────────────────────────────────
-    UPLOAD_DIR: str = "./uploads"
+    UPLOAD_DIR: str = "/app/data/uploads"
     MAX_UPLOAD_SIZE_MB: int = 100
     ALLOWED_EXTENSIONS: List[str] = [".zip", ".tar.gz"]
 
     # ─── Celery ───────────────────────────────────────────────
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    CELERY_BROKER_URL: str = "redis://redis:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
     CELERY_MAX_RETRIES: int = 3
     CELERY_TASK_TIMEOUT: int = 300
 
@@ -129,11 +132,11 @@ class Settings(BaseSettings):
     RETRIEVAL_RERANK_TOP_K: int = 5
     CONTEXT_MAX_TOKENS: int = 6000
 
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", "ALLOWED_EXTENSIONS", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v):
+    def parse_list_str(cls, v):
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+            return [item.strip() for item in v.split(",")]
         return v
 
     @property

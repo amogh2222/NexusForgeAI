@@ -22,6 +22,7 @@ from backend.api.routes.intelligence import router as intelligence_router
 from backend.api.routes.evaluation import router as evaluation_router
 from backend.api.routes.workspace import router as workspace_router
 from backend.api.routes.health import router as health_router
+from backend.api.routes._combined_routes import chat_router, agents_router, memory_router, executions_router
 from backend.telemetry.metrics import setup_metrics
 from backend.telemetry.tracing import setup_tracing
 
@@ -127,6 +128,10 @@ def create_app() -> FastAPI:
     app.include_router(intelligence_router, prefix="/api/v1",              tags=["intelligence"])
     app.include_router(evaluation_router,   prefix="/api/v1",              tags=["evaluation"])
     app.include_router(workspace_router,    prefix="/api/v1",              tags=["workspace"])
+    app.include_router(chat_router,         prefix="/api/v1/chat",         tags=["chat"])
+    app.include_router(agents_router,       prefix="/api/v1/agents",       tags=["agents"])
+    app.include_router(memory_router,       prefix="/api/v1/memory",       tags=["memory"])
+    app.include_router(executions_router,   prefix="/api/v1/executions",   tags=["executions"])
 
     # ─── WebSocket ───────────────────────────────────────────────────────────
     try:

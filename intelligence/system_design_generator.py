@@ -153,12 +153,27 @@ class SystemDesignGenerator:
             from langchain_core.messages import HumanMessage
             response = await llm.ainvoke([HumanMessage(content=prompt)])
             raw = response.content if hasattr(response, "content") else str(response)
+            if isinstance(raw, list):
+                # Gemini returns a list of blocks, extract text
+                text_blocks = [b.get("text", "") for b in raw if isinstance(b, dict) and "text" in b]
+                raw = "".join(text_blocks) if text_blocks else str(raw)
         except Exception as e:
             log.warning("sysdesign.llm_failed", error=str(e))
             raw = self._fallback_design(preset)
 
         sections = self._parse_sections(raw)
-        mermaid = self._generate_mermaid(context, preset)
+        
+        # Use LLM generated diagram, strip markdown code block backticks if present
+        mermaid = sections.get("MERMAID_DIAGRAM", self._generate_mermaid(context, preset))
+        if mermaid.startswith("```mermaid"):
+            mermaid = mermaid[10:]
+        if mermaid.startswith("```"):
+            mermaid = mermaid[3:]
+        if mermaid.endswith("```"):
+            mermaid = mermaid[:-3]
+        mermaid = mermaid.strip()
+        if not mermaid.startswith("graph"):
+            mermaid = "graph TB\n" + mermaid
 
         return SystemDesignDoc(
             repo_id=repo_id,
@@ -236,6 +251,9 @@ Generate a detailed system design with these sections (use these EXACT headers):
 ## CDN_STRATEGY
 ## MONITORING
 ## COST_ESTIMATE
+## MERMAID_DIAGRAM
+
+For the MERMAID_DIAGRAM section, provide ONLY a valid mermaid graph TB block that models the architecture based on the provided endpoints and codebase context.
 
 Be specific: mention exact technologies (e.g., Aurora PostgreSQL vs CockroachDB),
 specific configurations (e.g., Redis Cluster with 6 nodes, 32GB RAM each),

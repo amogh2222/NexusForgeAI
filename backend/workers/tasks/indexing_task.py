@@ -98,13 +98,27 @@ def index_repository(
                             clone_url = github_url.replace("https://", f"https://{github_token}@")
                     try:
                         import subprocess
-                        log.info("indexing.cloning", url=github_url, dest=repo_dir)
-                        subprocess.run(
-                            ["git", "clone", "--depth", "1", "--branch", branch, clone_url, repo_dir],
-                            capture_output=True,
-                            text=True,
-                            check=True,
-                        )
+                        log.info("indexing.cloning", url=github_url, dest=repo_dir, branch=branch)
+                        # First try with the specified branch
+                        try:
+                            subprocess.run(
+                                ["git", "clone", "--depth", "1", "--branch", branch, clone_url, repo_dir],
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                            )
+                        except subprocess.CalledProcessError as e:
+                            if "not found" in e.stderr.lower():
+                                log.warning("indexing.branch_not_found_fallback", branch=branch, url=github_url)
+                                # If branch fails, try cloning the default branch
+                                subprocess.run(
+                                    ["git", "clone", "--depth", "1", clone_url, repo_dir],
+                                    capture_output=True,
+                                    text=True,
+                                    check=True,
+                                )
+                            else:
+                                raise
                     except subprocess.CalledProcessError as e:
                         log.error("indexing.clone_failed", stdout=e.stdout, stderr=e.stderr)
                         raise ValueError(f"Git clone failed: {e.stderr.strip() if e.stderr else str(e)}")
