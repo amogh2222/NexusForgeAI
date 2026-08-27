@@ -4,13 +4,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Send, Bot, User, Settings, Play, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/lib/api";
+import { api, getAuthToken } from "@/lib/api";
 import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [repositoryId, setRepositoryId] = useState<string | null>(null);
   const [agentLogs, setAgentLogs] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
@@ -29,16 +30,30 @@ export default function ChatPage() {
           const pid = projects[0].id;
           setProjectId(pid);
           
+          let token = getAuthToken();
+          if (!token) {
+            window.location.href = "/auth";
+            return;
+          }
+
           // Initial load
-          const [history, logs] = await Promise.all([
+          const [history, logs, repos] = await Promise.all([
             api.chat.getHistory(threadId.current),
-            api.agents.getLogs(pid, 20)
+            api.agents.getLogs(pid, 20),
+            api.repositories.list(pid)
           ]);
           if (history && history.length > 0) setMessages(history);
           if (logs) setAgentLogs(logs);
+          if (repos && repos.length > 0) {
+            // Select the most recently updated repository or the first one
+            setRepositoryId(repos[0].id);
+          }
         }
       } catch (err) {
         console.error("Failed to load project:", err);
+        if (err instanceof Error && err.message.includes("401")) {
+          window.location.href = "/auth";
+        }
       }
     }
     init();
@@ -97,6 +112,22 @@ export default function ChatPage() {
         return updated;
       });
       setIsAgentThinking(false);
+    } else if (lastEvent.type === 'agent_error' || lastEvent.type === 'pipeline_error') {
+      setIsAgentThinking(false);
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.isStreaming = false;
+        }
+        return [...updated, {
+          id: Math.random().toString(),
+          role: 'SYSTEM',
+          content: `Error: ${lastEvent.error || 'An error occurred during execution.'}`,
+          agent_name: 'System',
+          isStreaming: false
+        }];
+      });
     }
   }, [lastEvent]);
 
@@ -118,6 +149,7 @@ export default function ChatPage() {
         project_id: projectId,
         thread_id: threadId.current,
         content: userMsg.content,
+        repository_id: repositoryId || undefined,
       });
     } catch (err) {
       console.error("Failed to send message:", err);

@@ -82,10 +82,11 @@ Please create a structured execution plan for this request.
                      complexity=plan.estimated_complexity,
                      duration_ms=duration_ms)
 
+            from langchain_core.messages import AIMessage
             return {
                 "plan": plan.model_dump(),
                 "agent_history": state.get("agent_history", []) + [self.AGENT_NAME],
-                "messages": [{"role": "agent", "agent": self.AGENT_NAME, "content": f"Created execution plan: {plan.title}"}],
+                "messages": [AIMessage(content=f"Created execution plan: {plan.title}", name=self.AGENT_NAME)],
             }
 
         except Exception as e:

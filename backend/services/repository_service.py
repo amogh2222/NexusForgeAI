@@ -19,6 +19,15 @@ class RepositoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _enforce_single_repository(self, project_id: UUID):
+        """Ensure only one repository exists per project. Deletes others."""
+        result = await self.db.execute(select(Repository).where(Repository.project_id == project_id))
+        existing_repos = result.scalars().all()
+        for r in existing_repos:
+            await self.db.delete(r)
+        if existing_repos:
+            await self.db.commit()
+
     async def create_from_zip(
         self,
         project_id: UUID,
@@ -27,6 +36,8 @@ class RepositoryService:
         name: str,
     ) -> Repository:
         """Create a repository record from a ZIP upload and trigger indexing."""
+        await self._enforce_single_repository(project_id)
+
         repo = Repository(
             id=uuid.uuid4(),
             project_id=project_id,
@@ -71,6 +82,8 @@ class RepositoryService:
 
         # Determine source type
         source_type = RepoSourceType.GITHUB_PRIVATE if github_token else RepoSourceType.GITHUB_PUBLIC
+
+        await self._enforce_single_repository(project_id)
 
         repo = Repository(
             id=uuid.uuid4(),

@@ -53,18 +53,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     SparseEmbeddingService.get_instance()
     log.info("nexusforge.sparse_embedder_loaded")
 
-    # Initialize Neo4j knowledge graph
-    from graph.neo4j_client import Neo4jClient
-    neo4j = Neo4jClient.get_instance()
-    if neo4j.is_available():
-        await neo4j.setup_schema()
-        log.info("nexusforge.neo4j_connected", uri=settings.NEO4J_URI)
-    else:
-        log.warning("nexusforge.neo4j_unavailable", hint="graph queries disabled")
+    # Start Redis PubSub Listener for WebSockets
+    try:
+        from backend.api.websocket.redis_listener import redis_listener
+        await redis_listener.start()
+    except Exception as e:
+        log.error("nexusforge.redis_listener_failed", error=str(e))
 
-    # Initialize model router
+    # Initialize Neo4j graph schemas
+    from graph.neo4j_client import Neo4jClient
+    try:
+        neo4j_client = Neo4jClient.get_instance()
+        await neo4j_client.initialize_schema()
+        log.info("nexusforge.neo4j_connected", uri=settings.NEO4J_URI)
+    except Exception as e:
+        log.error("nexusforge.neo4j_connection_failed", error=str(e))
+        
+    # Initialize LLM Router
     from agents.router.model_router import ModelRouter
     ModelRouter.get_instance()
+    log.info("model_router.initialized", 
+             openai=settings.OPENAI_API_KEY is not None,
+             ollama=settings.OLLAMA_BASE_URL,
+             vllm="disabled")
 
     # Initialize Kafka Streams
     from backend.core.kafka_stream import KafkaEventStream
@@ -74,8 +85,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     yield
 
-    # Cleanup
+    # Shutdown
     log.info("nexusforge.shutdown")
+    
+    try:
+        from backend.api.websocket.redis_listener import redis_listener
+        await redis_listener.stop()
+    except Exception as e:
+        log.error("nexusforge.redis_listener_stop_failed", error=str(e))
+        
     await engine.dispose()
     neo4j_inst = Neo4jClient.get_instance()
     await neo4j_inst.close()

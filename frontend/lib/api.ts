@@ -78,6 +78,11 @@ export const api = {
       return result;
     }
   },
+  github: {
+    listRepos() {
+      return fetchAPI("/github/repos");
+    }
+  },
   projects: {
     create(data: { name: string, color?: string }) {
       return fetchAPI("/projects/", {

@@ -28,23 +28,18 @@ export default function Home() {
   useEffect(() => {
     async function init() {
       try {
+        // Handle OAuth token redirect
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get("token");
+        if (urlToken) {
+          localStorage.setItem("nexusforge_token", urlToken);
+          window.history.replaceState({}, document.title, "/");
+        }
+
         let token = getAuthToken();
         if (!token) {
-          // Attempt to register a default test user
-          try {
-            await api.auth.register({
-              email: "testuser@nexusforge.ai",
-              username: "testuser",
-              password: "testpassword123",
-              full_name: "Test User"
-            });
-          } catch (e) {
-            // Might already exist, ignore
-          }
-          await api.auth.login({
-            email: "testuser@nexusforge.ai",
-            password: "testpassword123"
-          });
+          window.location.href = "/auth";
+          return;
         }
         
         // Ensure a project exists
@@ -57,6 +52,10 @@ export default function Home() {
         }
       } catch (err) {
         console.error("Initialization error:", err);
+        // If API fails (e.g. 401 Unauthorized), redirect to auth
+        if (err instanceof Error && err.message.includes("401")) {
+          window.location.href = "/auth";
+        }
       } finally {
         setIsInitializing(false);
       }

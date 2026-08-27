@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import Editor from "@monaco-editor/react";
 import { Play, TerminalSquare, Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, getAuthToken } from "@/lib/api";
 
 export default function SandboxPage() {
   const [code, setCode] = useState("print('Hello from NexusForge Sandbox')\n");
@@ -15,12 +15,21 @@ export default function SandboxPage() {
   useEffect(() => {
     async function init() {
       try {
+        let token = getAuthToken();
+        if (!token) {
+          window.location.href = "/auth";
+          return;
+        }
+
         const projects = await api.projects.list();
         if (projects && projects.length > 0) {
           setProjectId(projects[0].id);
         }
       } catch (err) {
         console.error("Failed to load project:", err);
+        if (err instanceof Error && err.message.includes("401")) {
+          window.location.href = "/auth";
+        }
       }
     }
     init();

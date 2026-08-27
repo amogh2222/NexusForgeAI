@@ -61,10 +61,67 @@ async def github_callback(code: str, request: Request):
             log.error("github_oauth.no_token", response=data)
             raise HTTPException(status_code=400, detail="Invalid token response")
 
-        # In a real app, we would save this token to the user's profile in the DB here
-        # user = await get_current_user(request)
-        # await user.save_github_token(access_token)
+        # Fetch GitHub User Profile
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
+        )
+        if user_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to fetch GitHub profile")
+        
+        gh_user = user_resp.json()
+        gh_id = str(gh_user.get("id"))
+        gh_username = gh_user.get("login")
+        gh_email = gh_user.get("email") or f"{gh_username}@github.nexusforge.local"
 
-        log.info("github_oauth.success")
-        return {"status": "success", "message": "GitHub account linked successfully"}
+        # Database integration
+        from backend.core.database import get_db
+        from backend.models import User
+        from sqlalchemy import select
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from backend.core.security import create_access_token
+
+        async for db in get_db():
+            # Check if user exists by github_id
+            result = await db.execute(select(User).where(User.github_id == gh_id))
+            user = result.scalars().first()
+
+            if not user:
+                # Check if email exists
+                result = await db.execute(select(User).where(User.email == gh_email))
+                user = result.scalars().first()
+                if user:
+                    # Link account
+                    user.github_id = gh_id
+                    user.github_username = gh_username
+                    user.github_access_token = access_token
+                else:
+                    # Create new user
+                    user = User(
+                        email=gh_email,
+                        username=gh_username,
+                        full_name=gh_user.get("name"),
+                        avatar_url=gh_user.get("avatar_url"),
+                        github_id=gh_id,
+                        github_username=gh_username,
+                        github_access_token=access_token,
+                        is_verified=True
+                    )
+                    db.add(user)
+            else:
+                # Update existing user's token
+                user.github_access_token = access_token
+                user.github_username = gh_username
+
+            await db.commit()
+            await db.refresh(user)
+
+            # Generate JWT Token
+            jwt_token = create_access_token(str(user.id))
+            
+            # Redirect back to frontend
+            # In production, use NEXT_PUBLIC_FRONTEND_URL. For now, localhost:3000
+            frontend_url = "http://localhost:3000"
+            return RedirectResponse(f"{frontend_url}/?token={jwt_token}")
+
 
