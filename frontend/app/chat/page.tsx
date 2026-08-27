@@ -40,7 +40,9 @@ export default function ChatPage() {
           api.chat.getHistory(threadId.current),
           api.agents.getLogs(projectId as string, 20)
         ]);
-        if (history) setMessages(history);
+        if (history && history.length > 0) {
+          setMessages(history);
+        }
         if (logs) setAgentLogs(logs);
       } catch (err) {
         // ignore polling errors
@@ -98,32 +100,35 @@ export default function ChatPage() {
               <p className="text-slate-600">Hello! I&apos;m NexusForge AI. How can I help you scale this repository?</p>
             </div>
           )}
-          {messages.map((msg, i) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              key={msg.id || i} 
-              className={`flex gap-4 max-w-4xl ${msg.role === "user" ? "ml-auto flex-row-reverse" : ""}`}
-            >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                msg.role === "user" ? "bg-blue-600" : "bg-purple-600"
-              }`}>
-                {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
-              </div>
-              <div className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-slate-500 font-medium">{msg.agent_name || (msg.role === 'user' ? 'User' : 'Agent')}</span>
-                </div>
-                <div className={`p-4 rounded-2xl whitespace-pre-wrap shadow-sm ${
-                  msg.role === "user" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-white border border-slate-200 text-slate-800"
+          {messages.map((msg, i) => {
+            const isUser = msg.role.toLowerCase() === "user";
+            return (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                key={msg.id || i} 
+                className={`flex gap-4 max-w-4xl ${isUser ? "ml-auto flex-row-reverse" : ""}`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                  isUser ? "bg-blue-600" : "bg-purple-600"
                 }`}>
-                  {msg.content}
+                  {isUser ? <User size={16} /> : <Bot size={16} />}
                 </div>
-              </div>
-            </motion.div>
-          ))}
+                <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-slate-500 font-medium">{msg.agent_name || (isUser ? 'User' : 'Agent')}</span>
+                  </div>
+                  <div className={`p-4 rounded-2xl whitespace-pre-wrap shadow-sm ${
+                    isUser 
+                      ? "bg-blue-600 text-white" 
+                      : "bg-white border border-slate-200 text-slate-800"
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
 
