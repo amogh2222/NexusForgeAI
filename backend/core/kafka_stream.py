@@ -6,14 +6,22 @@ from __future__ import annotations
 
 import json
 import structlog
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 log = structlog.get_logger()
 
 class KafkaEventStream:
     """Pub/Sub mechanism for agent state transitions using aiokafka."""
 
-    def __init__(self, bootstrap_servers: str = "localhost:9092"):
+    _instance: Optional["KafkaEventStream"] = None
+
+    @classmethod
+    def get_instance(cls) -> "KafkaEventStream":
+        if cls._instance is None:
+            cls._instance = KafkaEventStream()
+        return cls._instance
+
+    def __init__(self, bootstrap_servers: str = "kafka:9092"):
         self._bootstrap_servers = bootstrap_servers
         self._producer = None
         self._consumer = None

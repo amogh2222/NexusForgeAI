@@ -10,6 +10,7 @@ import os
 import platform
 import subprocess
 import time
+import uuid
 from typing import Optional
 
 import structlog
@@ -46,30 +47,61 @@ class FirecrackerIsolator(SandboxIsolator):
 
     async def _execute_firecracker(self, code: str, language: str, timeout: int) -> SandboxResult:
         start = time.perf_counter()
-        
-        # This is a conceptual implementation of wrapping the execution in a Firecracker microVM
-        # In a real setup, we would inject the code into a rootfs, start the VM, execute, and read results via virtio
-        cmd = [
-            "firectl",
-            "--kernel=/var/lib/firecracker/vmlinux",
-            "--root-drive=/var/lib/firecracker/rootfs.ext4",
-            "--cpu-template=T2",
-            f"--execute={self._build_execution_script(code, language)}"
-        ]
+        socket_path = f"/tmp/firecracker_{uuid.uuid4().hex[:8]}.socket"
         
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
+            # 1. Start Firecracker process
+            fc_proc = await asyncio.create_subprocess_exec(
+                "firecracker", "--api-sock", socket_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+            
+            # Wait for socket
+            for _ in range(50):
+                if os.path.exists(socket_path):
+                    break
+                await asyncio.sleep(0.1)
+
+            # 2. Configure MicroVM via HTTP API over Unix Socket
+            import httpx
+            transport = httpx.AsyncHTTPTransport(uds=socket_path)
+            async with httpx.AsyncClient(transport=transport) as client:
+                # Set boot source
+                await client.put(
+                    "http://localhost/boot-source",
+                    json={
+                        "kernel_image_path": "/var/lib/firecracker/vmlinux",
+                        # Pass the script to execute via kernel boot args for init
+                        "boot_args": f"console=ttyS0 reboot=k panic=1 pci=off init=/bin/sh -c '{self._build_execution_script(code, language)} > /dev/ttyS0 2>&1; poweroff -f'"
+                    }
+                )
+                
+                # Set root drive
+                await client.put(
+                    "http://localhost/drives/rootfs",
+                    json={
+                        "drive_id": "rootfs",
+                        "path_on_host": "/var/lib/firecracker/rootfs.ext4",
+                        "is_root_device": True,
+                        "is_read_only": True
+                    }
+                )
+                
+                # Start VM
+                await client.put(
+                    "http://localhost/actions",
+                    json={"action_type": "InstanceStart"}
+                )
+
+            # 3. Read output from serial console (stdout/stderr of the Firecracker process)
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(),
-                    timeout=timeout + 5,
+                    fc_proc.communicate(),
+                    timeout=timeout,
                 )
             except asyncio.TimeoutError:
-                proc.kill()
+                fc_proc.kill()
                 return SandboxResult(
                     stdout="", stderr="Firecracker execution timed out",
                     return_code=-1, timed_out=True,
@@ -77,16 +109,22 @@ class FirecrackerIsolator(SandboxIsolator):
                     mode="firecracker",
                 )
 
+            # Cleanup socket
+            if os.path.exists(socket_path):
+                os.remove(socket_path)
+
             return SandboxResult(
                 stdout=stdout.decode("utf-8", errors="replace"),
                 stderr=stderr.decode("utf-8", errors="replace"),
-                return_code=proc.returncode or 0,
+                return_code=fc_proc.returncode or 0,
                 timed_out=False,
                 execution_ms=(time.perf_counter() - start) * 1000,
                 mode="firecracker",
             )
         except Exception as e:
             log.warning("firecracker.failed", error=str(e))
+            if os.path.exists(socket_path):
+                os.remove(socket_path)
             return await super().execute(code, language, timeout)
 
     def _build_execution_script(self, code: str, language: str) -> str:

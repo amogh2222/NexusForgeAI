@@ -108,6 +108,7 @@ class NexusOrchestrator:
         from agents.debugger.agent import DebuggerAgent
         from agents.sysdesign.agent import SysDesignAgent
         from agents.time_machine.agent import TimeMachineAgent
+        from agents.plugin.agent import PluginAgent
 
         planner = PlannerAgent()
         coder = CoderAgent()
@@ -117,6 +118,7 @@ class NexusOrchestrator:
         debugger = DebuggerAgent()
         sysdesign = SysDesignAgent()
         time_machine = TimeMachineAgent()
+        plugin_agent = PluginAgent()
 
         # ─── Graph Definition ────────────────────────────────────
         graph = StateGraph(NexusState)
@@ -132,6 +134,7 @@ class NexusOrchestrator:
         graph.add_node("debugger", debugger.run)
         graph.add_node("sysdesign", sysdesign.run)
         graph.add_node("time_machine", time_machine.run)
+        graph.add_node("plugin", plugin_agent.run)
         graph.add_node("finalizer", self._finalizer_node)
 
         # ─── Entry: always retrieve context first ────────────────
@@ -151,6 +154,7 @@ class NexusOrchestrator:
                 "debugger": "debugger",
                 "sysdesign": "sysdesign",
                 "time_machine": "time_machine",
+                "plugin": "plugin",
                 "finalize": "finalizer",
             },
         )
@@ -187,6 +191,7 @@ class NexusOrchestrator:
         graph.add_edge("debugger", "finalizer")
         graph.add_edge("sysdesign", "finalizer")
         graph.add_edge("time_machine", "finalizer")
+        graph.add_edge("plugin", "finalizer")
         graph.add_edge("finalizer", END)
 
         # ─── Compile with MemorySaver checkpoint ────────────────
@@ -241,6 +246,8 @@ class NexusOrchestrator:
             task_type = "sysdesign"
         elif any(kw in task for kw in ["history", "evolution", "time machine", "drift", "commits"]):
             task_type = "time_machine"
+        elif any(kw in task for kw in ["github", "pr", "pull request", "issue", "kubernetes", "pod", "aws"]):
+            task_type = "plugin"
         else:
             task_type = "chat"
 
@@ -257,6 +264,7 @@ class NexusOrchestrator:
             "readme": "docs",
             "sysdesign": "sysdesign",
             "time_machine": "time_machine",
+            "plugin": "plugin",
             "chat": "docs",  # For general Q&A, docs agent handles it
         }
         return routing_map.get(state["task_type"], "finalize")
@@ -287,6 +295,18 @@ class NexusOrchestrator:
         if state.get("generated_code"):
             files = state["generated_code"].get("files", [])
             parts.append(f"💻 **Code Generated**: {len(files)} file(s)")
+            
+            if state.get("repository_id") and files:
+                try:
+                    from backend.core.database import SessionLocal
+                    from backend.core.file_applier import FileApplier
+                    async with SessionLocal() as db:
+                        applier = FileApplier(db)
+                        success = await applier.apply_changes(state["repository_id"], state["generated_code"])
+                        if success:
+                            parts.append("💾 **Files automatically saved to repository workspace**")
+                except Exception as e:
+                    log.error("finalizer.file_applier_failed", error=str(e))
 
         if state.get("review_results"):
             issues = state["review_results"].get("issues", [])
@@ -352,6 +372,13 @@ class NexusOrchestrator:
                         project_id=project_id,
                         thread_id=thread_id,
                     )
+                # Publish to Kafka
+                from backend.core.kafka_stream import KafkaEventStream
+                await KafkaEventStream.get_instance().publish(
+                    topic="nexusforge.agent.events",
+                    event_type="agent_start",
+                    payload={"project_id": project_id, "thread_id": thread_id, "agent": node}
+                )
 
             elif kind == "on_chat_model_stream":
                 content = event["data"]["chunk"].content
@@ -377,6 +404,14 @@ class NexusOrchestrator:
                         ).to_dict(),
                         project_id=project_id,
                         thread_id=thread_id,
+                    )
+                # Publish to Kafka
+                if node:
+                    from backend.core.kafka_stream import KafkaEventStream
+                    await KafkaEventStream.get_instance().publish(
+                        topic="nexusforge.agent.events",
+                        event_type="agent_end",
+                        payload={"project_id": project_id, "thread_id": thread_id, "agent": node}
                     )
                 final_state = event.get("data", {}).get("output")
 

@@ -113,6 +113,8 @@ services:
       - ./agents:/app/agents
       - ./rag:/app/rag
       - ./sandbox:/app/sandbox
+      - ./evaluation:/app/evaluation
+      - ./plugins:/app/plugins
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock  # For sandbox execution
     ports:
@@ -157,6 +159,8 @@ services:
       - ./agents:/app/agents
       - ./rag:/app/rag
       - ./sandbox:/app/sandbox
+      - ./evaluation:/app/evaluation
+      - ./plugins:/app/plugins
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -247,12 +251,37 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
+  # ──────────────────────────────────────────
+  # vLLM Inference Server — Fast local model serving
+  # ──────────────────────────────────────────
+  vllm:
+    image: vllm/vllm-openai:v0.5.4
+    container_name: nexusforge_vllm
+    restart: unless-stopped
+    command: --model Qwen/Qwen2.5-Coder-7B-Instruct --dtype auto --max-model-len 4096 --gpu-memory-utilization 0.90
+    ports:
+      - "8080:8000"
+    # To enable GPU on Linux hosts with nvidia-docker installed, uncomment below:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
   neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
   repo_uploads:
+  vllm_cache:
 
 networks:
   default:

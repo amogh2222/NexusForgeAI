@@ -3,6 +3,7 @@ NexusForge AI — FastAPI Application Entry Point
 """
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+import asyncio
 
 import structlog
 from fastapi import FastAPI
@@ -79,13 +80,51 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     # Initialize Kafka Streams
     from backend.core.kafka_stream import KafkaEventStream
-    kafka_stream = KafkaEventStream(bootstrap_servers="kafka:9092")
+    kafka_stream = KafkaEventStream.get_instance()
     await kafka_stream.connect_producer()
     log.info("nexusforge.kafka_connected")
+
+    # Initialize Plugin Registry
+    from plugins.registry import PluginRegistry
+    plugin_registry = PluginRegistry.get_instance()
+    await plugin_registry.initialize_plugins({
+        "github": {
+            "token": settings.GITHUB_APP_PRIVATE_KEY_PATH, # Or token
+            "org": "NexusForge",
+            "repo": "demo"
+        }
+    })
+    log.info("nexusforge.plugins_loaded")
+
+    async def process_kafka_event(event_type: str, payload: dict):
+        if event_type in ("agent_start", "agent_end"):
+            try:
+                from backend.core.database import SessionLocal
+                from backend.models import AgentLog
+                import uuid
+                
+                async with SessionLocal() as db:
+                    log_entry = AgentLog(
+                        project_id=uuid.UUID(payload.get("project_id")),
+                        agent_name=payload.get("agent"),
+                        action=f"Agent {event_type}",
+                        input_summary=payload.get("thread_id", ""),
+                        status="success" if event_type == "agent_end" else "in_progress"
+                    )
+                    db.add(log_entry)
+                    await db.commit()
+            except Exception as e:
+                log.error("kafka.event_processing_error", error=str(e))
+
+    await kafka_stream.connect_consumer("nexusforge.agent.events")
+    consumer_task = asyncio.create_task(kafka_stream.consume_loop(process_kafka_event))
+    log.info("nexusforge.kafka_consumer_started")
 
     yield
 
     # Shutdown
+    if consumer_task:
+        consumer_task.cancel()
     log.info("nexusforge.shutdown")
 
     try:

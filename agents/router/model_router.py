@@ -186,18 +186,18 @@ class ModelRouter:
         s = self._s
 
         # If Gemini key is provided, prefer it for EVERYTHING to ensure it works seamlessly
-        gemini_key = s.GEMINI_API_KEY
-        if gemini_key:
+        if s.OPENAI_API_KEY:
             try:
-                from langchain_google_genai import ChatGoogleGenerativeAI
-                log.info("model_router.using_gemini", model="gemini-3.6-flash")
-                return ChatGoogleGenerativeAI(
-                    model="gemini-3.6-flash",
-                    google_api_key=gemini_key,
+                from langchain_openai import ChatOpenAI
+                log.info("model_router.using_openai", model=s.OPENAI_MODEL)
+                return ChatOpenAI(
+                    model=s.OPENAI_MODEL,
+                    api_key=s.OPENAI_API_KEY,
+                    base_url=s.OPENAI_BASE_URL if s.OPENAI_BASE_URL else None,
                     temperature=0.05 if task_type in (TaskType.CODEGEN, TaskType.DEBUG) else 0.2,
                 )
             except Exception as e:
-                log.warning("model_router.gemini_fallback_failed", error=str(e))
+                log.warning("model_router.openai_fallback_failed", error=str(e))
 
         # Cloud fallback for long context (OpenAI)
         if context_length > s.LOCAL_CONTEXT_WINDOW_TOKENS and s.OPENAI_API_KEY:

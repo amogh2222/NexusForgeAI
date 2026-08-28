@@ -28,6 +28,11 @@ class EmbeddingService:
         self.max_seq_length = max_seq_length
         self.model = None
 
+        if model_name == "mock":
+            log.warning("embeddings.mocked", msg="Mock embeddings requested via config")
+            self.model = None
+            return
+
         try:
             from sentence_transformers import SentenceTransformer
             log.info("embeddings.loading", model=model_name)

@@ -133,16 +133,8 @@ export default function Home() {
     <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-8 relative">
-        <motion.div 
-          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-[120px] pointer-events-none" 
-        />
-        <motion.div 
-          animate={{ x: [0, -40, 0], y: [0, -50, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-blue-200/40 rounded-full blur-[150px] pointer-events-none" 
-        />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-[120px] pointer-events-none animate-float" />
+        <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-sky-200/40 rounded-full blur-[150px] pointer-events-none animate-float" style={{ animationDelay: "2s" }} />
 
         <div className="max-w-6xl mx-auto relative z-10">
           <header className="mb-12">
@@ -243,6 +235,22 @@ export default function Home() {
                       <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-1 rounded-md">Connecting...</span>
                     )}
                   </div>
+                </div>
+                <div className="flex gap-4 mb-6">
+                  <button 
+                    onClick={() => setIsGithubModalOpen(true)}
+                    className="btn-3d flex items-center px-5 py-3 rounded-xl font-medium"
+                  >
+                    <GitBranch className="w-5 h-5 mr-2" />
+                    Connect GitHub Repo
+                  </button>
+                  <button 
+                    onClick={() => setIsZipModalOpen(true)}
+                    className="glass flex items-center px-5 py-3 rounded-xl font-medium text-slate-700 hover:text-slate-900"
+                  >
+                    <FileUp className="w-5 h-5 mr-2" />
+                    Upload Local ZIP
+                  </button>
                 </div>
               
               <div className="space-y-4">

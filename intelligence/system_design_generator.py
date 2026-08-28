@@ -158,8 +158,8 @@ class SystemDesignGenerator:
                 text_blocks = [b.get("text", "") for b in raw if isinstance(b, dict) and "text" in b]
                 raw = "".join(text_blocks) if text_blocks else str(raw)
         except Exception as e:
-            log.warning("sysdesign.llm_failed", error=str(e))
-            raw = self._fallback_design(preset)
+            log.error("sysdesign.llm_failed", error=str(e))
+            raise RuntimeError(f"Enterprise Feature not implemented/configured: System Design Generator failed to call LLM: {e}")
 
         sections = self._parse_sections(raw)
         

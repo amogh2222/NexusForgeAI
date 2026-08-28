@@ -47,7 +47,7 @@ async def _execute_graph_query(
     client = Neo4jClient.get_instance()
 
     if not client.is_available():
-        return "⚠️ Knowledge graph not available. Neo4j connection failed or not configured."
+        raise RuntimeError("Enterprise Feature not implemented/configured: Knowledge graph not available. Neo4j connection failed.")
 
     try:
         match query_type:

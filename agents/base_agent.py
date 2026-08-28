@@ -54,6 +54,17 @@ class BaseAgent(ABC):
             log.warning("agent.ollama_unavailable", agent=self.AGENT_NAME, error=str(e))
 
         # Fallback to OpenAI-compatible API
+        if settings.OPENAI_API_KEY and "gemini" in settings.OPENAI_MODEL.lower():
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            
+            self._llm = ChatGoogleGenerativeAI(
+                model=settings.OPENAI_MODEL,
+                google_api_key=settings.OPENAI_API_KEY,
+                temperature=0.1,
+            )
+            log.info("agent.llm_connected", agent=self.AGENT_NAME, provider="gemini", model=settings.OPENAI_MODEL)
+            return self._llm
+
         if settings.OPENAI_API_KEY and settings.USE_OPENAI_FALLBACK:
             from langchain_openai import ChatOpenAI
             self._llm = ChatOpenAI(

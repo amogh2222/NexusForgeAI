@@ -141,25 +141,8 @@ async def evaluate_rag(
         )
 
     except ImportError as e:
-        log.warning("ragas.not_installed", error=str(e), hint="pip install ragas datasets")
-        # Return mock scores for systems without RAGAS
-        return RAGASResult(
-            faithfulness=0.0,
-            answer_relevancy=0.0,
-            context_precision=0.0,
-            context_recall=None,
-            mean_score=0.0,
-            questions_evaluated=n,
-            error=f"RAGAS not installed: {e}",
-        )
+        log.error("ragas.not_installed", error=str(e), hint="pip install ragas datasets")
+        raise RuntimeError(f"Enterprise Feature not implemented: RAGAS evaluation failed. Missing dependencies: {e}")
     except Exception as e:
-        log.warning("ragas.evaluation_failed", error=str(e))
-        return RAGASResult(
-            faithfulness=0.0,
-            answer_relevancy=0.0,
-            context_precision=0.0,
-            context_recall=None,
-            mean_score=0.0,
-            questions_evaluated=n,
-            error=str(e),
-        )
+        log.error("ragas.evaluation_failed", error=str(e))
+        raise RuntimeError(f"RAGAS evaluation failed: {e}")
