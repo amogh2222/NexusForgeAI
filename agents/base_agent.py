@@ -54,7 +54,7 @@ class BaseAgent(ABC):
                 streaming=True,  # REQUIRED for token streaming
             )
             # Verify connection
-            llm.invoke("ping", max_tokens=5)
+            llm.invoke("ping")
             self._llm = llm
             log.info("agent.llm_connected", agent=self.AGENT_NAME, provider="ollama", model=settings.OLLAMA_MODEL)
             return self._llm
@@ -187,16 +187,16 @@ Sources:
                     dummy_data[field_name] = default_val
                 else:
                     annotation_str = str(field_info.annotation).lower()
-                    if "str" in annotation_str:
+                    if "list" in annotation_str:
+                        dummy_data[field_name] = []
+                    elif "dict" in annotation_str:
+                        dummy_data[field_name] = {}
+                    elif "str" in annotation_str:
                         dummy_data[field_name] = "[Fallback Data]"
                     elif "int" in annotation_str or "float" in annotation_str:
                         dummy_data[field_name] = 0
                     elif "bool" in annotation_str:
                         dummy_data[field_name] = False
-                    elif "list" in annotation_str:
-                        dummy_data[field_name] = []
-                    elif "dict" in annotation_str:
-                        dummy_data[field_name] = {}
                     else:
                         dummy_data[field_name] = None
             return schema.model_construct(**dummy_data)

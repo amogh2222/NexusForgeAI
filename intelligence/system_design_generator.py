@@ -188,18 +188,6 @@ Prometheus scrapes metrics, Grafana provides dashboards, and OpenTelemetry handl
 
 ## COST_ESTIMATE
 Estimated monthly cost at scale: $12,500/mo (Compute: $6K, DB: $4K, Cache/Queue: $2.5K).
-
-## MERMAID_DIAGRAM
-```mermaid
-graph TD
-    Client --> CDN[Cloudflare CDN]
-    CDN --> ALB[Load Balancer]
-    ALB --> API[FastAPI Cluster]
-    API --> Redis[(Redis Cache)]
-    API --> DB[(PostgreSQL Aurora)]
-    API --> Kafka[Kafka Topic]
-    Kafka --> Workers[Celery Workers]
-```
 """
 
         sections = self._parse_sections(raw)
