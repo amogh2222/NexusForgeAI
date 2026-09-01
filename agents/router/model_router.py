@@ -195,6 +195,7 @@ class ModelRouter:
                     api_key=s.OPENAI_API_KEY,
                     base_url=s.OPENAI_BASE_URL if s.OPENAI_BASE_URL else None,
                     temperature=0.05 if task_type in (TaskType.CODEGEN, TaskType.DEBUG) else 0.2,
+                    streaming=True,
                 )
             except Exception as e:
                 log.warning("model_router.openai_fallback_failed", error=str(e))
@@ -251,6 +252,7 @@ class ModelRouter:
             model=model,
             base_url=s.OLLAMA_BASE_URL,
             temperature=temperature,
+            streaming=True,
         )
 
     def get_routing_info(self, task_type: TaskType, context_length: int = 0) -> dict:

@@ -213,7 +213,8 @@ graph TD
         if mermaid.endswith("```"):
             mermaid = mermaid[:-3]
         mermaid = mermaid.strip()
-        if not mermaid.startswith("graph"):
+        mermaid = mermaid.strip()
+        if not any(mermaid.startswith(kw) for kw in ["graph", "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram"]):
             mermaid = "graph TB\n" + mermaid
 
         return SystemDesignDoc(

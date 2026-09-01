@@ -97,11 +97,20 @@ async def run_benchmark(body: BenchmarkRunRequest, background_tasks: BackgroundT
         # Build agent function from NexusForge workspace chat
         async def agent_fn(prompt: str) -> str:
             try:
-                from agents.orchestrator import NexusOrchestrator
-                orch = NexusOrchestrator(project_id=body.project_id)
-                return await orch.run(task_description=prompt)
+                from agents.orchestrator import get_orchestrator
+                orch = get_orchestrator()
+                state = await orch.arun(
+                    project_id=body.project_id,
+                    thread_id="eval-thread",
+                    user_message=prompt,
+                )
+                messages = state.get("messages", [])
+                if messages:
+                    return messages[-1].content
+                return str(state)
             except Exception as e:
-                return f"Agent error: {e}"
+                import traceback
+                return f"Agent error: {e}\n{traceback.format_exc()}"
 
         report = await suite.run(
             suite_id=body.suite_id,
@@ -129,7 +138,7 @@ async def run_benchmark(body: BenchmarkRunRequest, background_tasks: BackgroundT
                         "rubric_score":  round(r.rubric_score, 1),
                         "latency_ms":    round(r.latency_ms, 0),
                         "error":         r.error,
-                        "actual_output": getattr(r, "actual_output", ""),
+                        "actual_output": getattr(r, "agent_output", ""),
                     }
                     for r in report.runs
                 ],

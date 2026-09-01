@@ -9,12 +9,20 @@ from typing import Any, Optional
 
 import structlog
 from langchain_core.language_models import BaseChatModel
-from tenacity import retry, stop_after_attempt, wait_exponential
+from langchain_core.messages import AIMessage
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from pydantic import BaseModel
 
 from backend.core.config import settings
 
 log = structlog.get_logger()
 
+def _is_retryable_llm_error(e: Exception) -> bool:
+    """Return False if the exception is a 429/quota error, bypassing tenacity retries."""
+    err_msg = str(e).lower()
+    if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg or "prepayment" in err_msg:
+        return False
+    return True
 
 class BaseAgent(ABC):
     """
@@ -128,10 +136,11 @@ Sources:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_llm_error),
         reraise=True,
     )
-    async def _invoke_llm(self, messages: list, structured_output_schema=None) -> Any:
-        """Invoke LLM with retry logic and optional structured output."""
+    async def _do_invoke_llm(self, messages: list, structured_output_schema=None) -> Any:
+        """Core LLM invocation with tenacity retry logic (bypassed on 429)."""
         llm = self._get_llm()
 
         if structured_output_schema:
@@ -147,6 +156,53 @@ Sources:
         if hasattr(resp, "content"):
             resp.content = cleaned_content
         return resp
+
+    async def _invoke_llm(self, messages: list, structured_output_schema=None) -> Any:
+        """Wrapper to invoke LLM and handle permanent failures gracefully by returning dummy data."""
+        try:
+            return await self._do_invoke_llm(messages, structured_output_schema)
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg or "prepayment" in err_msg:
+                log.warning("llm.quota_exhausted", error=str(e), schema=str(structured_output_schema))
+            else:
+                log.error("llm.invocation_failed", error=str(e))
+            
+            return self._generate_dummy_output(structured_output_schema)
+
+    def _generate_dummy_output(self, schema: Any) -> Any:
+        """Generate a best-effort dummy object when the LLM API fails."""
+        if schema is None:
+            return AIMessage(content="[LLM API Quota Exhausted or Error: Fallback Dummy Response]")
+        
+        try:
+            # Recursively build dummy Pydantic model
+            fields = schema.model_fields
+            dummy_data = {}
+            for field_name, field_info in fields.items():
+                default_val = field_info.default
+                is_undefined = type(default_val).__name__ == "PydanticUndefinedType" or default_val == getattr(field_info, "empty", None)
+                
+                if default_val is not None and not is_undefined and getattr(field_info, "default_factory", None) is None:
+                    dummy_data[field_name] = default_val
+                else:
+                    annotation_str = str(field_info.annotation).lower()
+                    if "str" in annotation_str:
+                        dummy_data[field_name] = "[Fallback Data]"
+                    elif "int" in annotation_str or "float" in annotation_str:
+                        dummy_data[field_name] = 0
+                    elif "bool" in annotation_str:
+                        dummy_data[field_name] = False
+                    elif "list" in annotation_str:
+                        dummy_data[field_name] = []
+                    elif "dict" in annotation_str:
+                        dummy_data[field_name] = {}
+                    else:
+                        dummy_data[field_name] = None
+            return schema.model_construct(**dummy_data)
+        except Exception as e:
+            log.error("llm.dummy_generation_failed", error=str(e))
+            return schema.model_construct() if hasattr(schema, "model_construct") else schema()
 
     def _emit_agent_start(self, state: dict, action: str) -> dict:
         """Return agent start event payload for WebSocket broadcast."""
