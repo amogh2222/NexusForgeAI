@@ -20,8 +20,80 @@ export default function ChatPage() {
   const threadId = useRef(`thread-${Math.random().toString(36).substring(7)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Handle Real-Time WebSocket Events without React Batching token drops
+  const handleWebSocketEvent = React.useCallback((event: any) => {
+    if (!event) return;
+
+    if (event.type === 'token') {
+      setIsAgentThinking(false);
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role.toLowerCase() !== 'user' && lastMsg.isStreaming) {
+          // Append to existing streaming message
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...lastMsg,
+            content: lastMsg.content + event.content,
+            agent_name: event.agent_name || lastMsg.agent_name
+          };
+          return updated;
+        } else {
+          // Create new streaming message
+          return [...prev, {
+            id: Math.random().toString(),
+            role: 'ASSISTANT',
+            content: event.content,
+            agent_name: event.agent_name || 'Agent',
+            isStreaming: true
+          }];
+        }
+      });
+    } else if (event.type === 'agent_start') {
+      setIsAgentThinking(true);
+      setAgentLogs(prev => [{
+        id: Math.random().toString(),
+        agent_name: event.agent_name,
+        action: event.action,
+        status: 'running',
+        created_at: new Date().toISOString()
+      }, ...prev].slice(0, 20));
+    } else if (event.type === 'agent_end') {
+      setAgentLogs(prev => prev.map(log => 
+        log.agent_name === event.agent_name && log.status === 'running'
+          ? { ...log, status: 'success', output_summary: event.output_summary }
+          : log
+      ));
+      // End streaming state for the last message
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.isStreaming = false;
+        }
+        return updated;
+      });
+      setIsAgentThinking(false);
+    } else if (event.type === 'agent_error' || event.type === 'pipeline_error') {
+      setIsAgentThinking(false);
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.isStreaming = false;
+        }
+        return [...updated, {
+          id: Math.random().toString(),
+          role: 'SYSTEM',
+          content: `Error: ${event.error || 'An error occurred during execution.'}`,
+          agent_name: 'System',
+          isStreaming: false
+        }];
+      });
+    }
+  }, []);
+
   // WebSocket Integration
-  const { isConnected, lastEvent } = useWebSocket(projectId, threadId.current);
+  const { isConnected } = useWebSocket(projectId, threadId.current, handleWebSocketEvent);
 
   // Initialize Project and load initial history
   useEffect(() => {
@@ -61,77 +133,7 @@ export default function ChatPage() {
     init();
   }, []);
 
-  // Handle Real-Time WebSocket Events
-  useEffect(() => {
-    if (!lastEvent) return;
 
-    if (lastEvent.type === 'token') {
-      setIsAgentThinking(false);
-      setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1];
-        if (lastMsg && lastMsg.role.toLowerCase() !== 'user' && lastMsg.isStreaming) {
-          // Append to existing streaming message
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...lastMsg,
-            content: lastMsg.content + lastEvent.content,
-            agent_name: lastEvent.agent_name || lastMsg.agent_name
-          };
-          return updated;
-        } else {
-          // Create new streaming message
-          return [...prev, {
-            id: Math.random().toString(),
-            role: 'ASSISTANT',
-            content: lastEvent.content,
-            agent_name: lastEvent.agent_name || 'Agent',
-            isStreaming: true
-          }];
-        }
-      });
-    } else if (lastEvent.type === 'agent_start') {
-      setIsAgentThinking(true);
-      setAgentLogs(prev => [{
-        id: Math.random().toString(),
-        agent_name: lastEvent.agent_name,
-        action: lastEvent.action,
-        status: 'running',
-        created_at: new Date().toISOString()
-      }, ...prev].slice(0, 20));
-    } else if (lastEvent.type === 'agent_end') {
-      setAgentLogs(prev => prev.map(log => 
-        log.agent_name === lastEvent.agent_name && log.status === 'running'
-          ? { ...log, status: 'success', output_summary: lastEvent.output_summary }
-          : log
-      ));
-      // End streaming state for the last message
-      setMessages(prev => {
-        const updated = [...prev];
-        const lastMsg = updated[updated.length - 1];
-        if (lastMsg && lastMsg.isStreaming) {
-          lastMsg.isStreaming = false;
-        }
-        return updated;
-      });
-      setIsAgentThinking(false);
-    } else if (lastEvent.type === 'agent_error' || lastEvent.type === 'pipeline_error') {
-      setIsAgentThinking(false);
-      setMessages(prev => {
-        const updated = [...prev];
-        const lastMsg = updated[updated.length - 1];
-        if (lastMsg && lastMsg.isStreaming) {
-          lastMsg.isStreaming = false;
-        }
-        return [...updated, {
-          id: Math.random().toString(),
-          role: 'SYSTEM',
-          content: `Error: ${lastEvent.error || 'An error occurred during execution.'}`,
-          agent_name: 'System',
-          isStreaming: false
-        }];
-      });
-    }
-  }, [lastEvent]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

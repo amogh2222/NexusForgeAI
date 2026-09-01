@@ -129,6 +129,7 @@ async def run_benchmark(body: BenchmarkRunRequest, background_tasks: BackgroundT
                         "rubric_score":  round(r.rubric_score, 1),
                         "latency_ms":    round(r.latency_ms, 0),
                         "error":         r.error,
+                        "actual_output": getattr(r, "actual_output", ""),
                     }
                     for r in report.runs
                 ],

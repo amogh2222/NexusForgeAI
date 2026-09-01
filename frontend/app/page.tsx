@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { FileUp, GitBranch, Terminal, Database, Activity, Code, Clock, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { GithubModal, ZipUploadModal } from "@/components/IngestionModals";
 import { api, getAuthToken } from "@/lib/api";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -174,13 +175,15 @@ export default function Home() {
               {isInitializing && <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm text-slate-600">Initializing...</div>}
             </motion.div>
 
-            <motion.div whileHover={{ y: -5, scale: 1.02 }} className="glass p-6 rounded-2xl cursor-pointer group opacity-60 transition-all shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
-                <Terminal size={24} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Sandbox Execution</h3>
-              <p className="text-sm text-slate-500">Coming soon. Run arbitrary code in an isolated Docker sandbox.</p>
-            </motion.div>
+            <Link href="/sandbox">
+              <motion.div whileHover={{ y: -5, scale: 1.02 }} className="glass p-6 rounded-2xl cursor-pointer group transition-all shadow-sm hover:shadow-xl">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
+                  <Terminal size={24} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Sandbox Execution</h3>
+                <p className="text-sm text-slate-500">Run arbitrary code in an isolated Docker sandbox.</p>
+              </motion.div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

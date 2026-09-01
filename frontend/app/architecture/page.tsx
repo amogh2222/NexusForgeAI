@@ -129,8 +129,12 @@ export default function ArchitecturePage() {
                     <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">System Topology</span>
                   </div>
                   {design.mermaid_diagram ? (
-                    <div className="p-4 bg-slate-950 rounded-xl overflow-x-auto border border-slate-800 font-mono text-xs text-emerald-400">
-                      <pre className="whitespace-pre">{design.mermaid_diagram}</pre>
+                    <div className="p-4 bg-white rounded-xl overflow-x-auto border border-slate-200 shadow-sm flex justify-center min-h-[300px] items-center">
+                      <img 
+                        src={`https://mermaid.ink/svg/${btoa(unescape(encodeURIComponent(design.mermaid_diagram)))}`} 
+                        alt="System Architecture Flowchart" 
+                        className="max-w-full h-auto rounded"
+                      />
                     </div>
                   ) : (
                     <div className="p-4 text-center text-slate-400 text-sm">

@@ -105,11 +105,14 @@ async def retrieve_memory(
     current_user: CurrentUser,
     top_k: int = 5,
 ):
-    """Semantic retrieval from project's vector memory."""
     from rag.retrieval.retriever import HybridRetriever
     retriever = HybridRetriever(top_k=top_k, rerank_top_k=top_k)
-    context, sources = await retriever.retrieve(query=query, project_id=project_id)
-    return {"query": query, "context": context, "sources": sources}
+    results = await retriever.qdrant.search(
+        query=query, 
+        project_id=project_id, 
+        top_k=top_k
+    )
+    return {"query": query, "context": results, "sources": []}
 
 
 @memory_router.get("/stats")
@@ -137,9 +140,15 @@ async def create_execution(
     import uuid
     from backend.models import Execution, ExecutionStatus
 
+    try:
+        project_uuid = uuid.UUID(request.project_id)
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid project_id format")
+
     execution = Execution(
         id=uuid.uuid4(),
-        project_id=request.project_id,
+        project_id=project_uuid,
         runtime=request.runtime,
         code=request.code,
         stdin=request.stdin,
@@ -166,9 +175,16 @@ async def create_execution(
 @executions_router.get("/{execution_id}")
 async def get_execution(execution_id: str, current_user: CurrentUser, db: DBSession):
     """Get execution result."""
+    import uuid
+    try:
+        execution_uuid = uuid.UUID(execution_id)
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid execution_id format")
+
     from sqlalchemy import select
     from backend.models import Execution
-    result = await db.execute(select(Execution).where(Execution.id == execution_id))
+    result = await db.execute(select(Execution).where(Execution.id == execution_uuid))
     execution = result.scalar_one_or_none()
     if not execution:
         from fastapi import HTTPException

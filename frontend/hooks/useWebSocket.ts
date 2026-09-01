@@ -10,7 +10,7 @@ export interface WSEvent {
   [key: string]: any;
 }
 
-export function useWebSocket(projectId: string | null, threadId?: string) {
+export function useWebSocket(projectId: string | null, threadId?: string, onMessage?: (event: WSEvent) => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<WSEvent | null>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -45,6 +45,7 @@ export function useWebSocket(projectId: string | null, threadId?: string) {
         try {
           const parsed = JSON.parse(event.data);
           setLastEvent(parsed);
+          if (onMessage) onMessage(parsed);
         } catch (e) {
           console.error("Failed to parse WS message", e);
         }

@@ -115,6 +115,7 @@ services:
       - ./sandbox:/app/sandbox
       - ./evaluation:/app/evaluation
       - ./plugins:/app/plugins
+      - ./intelligence:/app/intelligence
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock  # For sandbox execution
     ports:
@@ -161,6 +162,7 @@ services:
       - ./sandbox:/app/sandbox
       - ./evaluation:/app/evaluation
       - ./plugins:/app/plugins
+      - ./intelligence:/app/intelligence
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:

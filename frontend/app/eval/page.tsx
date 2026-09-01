@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { Beaker, Play, Loader2, CheckCircle2, AlertCircle, BarChart3, Activity } from "lucide-react";
+import { Beaker, Play, Loader2, CheckCircle2, AlertCircle, BarChart3, Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { api, getAuthToken } from "@/lib/api";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const TEST_CASES = [
   { id: "readme-001", title: "Production README Generation", desc: "Generates a complete, accurate README.md based on repo contents." },
@@ -19,6 +21,7 @@ export default function EvalPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -69,7 +72,8 @@ export default function EvalPage() {
                 score: Math.round(r.overall_score || 0),
                 duration: `${((r.latency_ms || 1000) / 1000).toFixed(1)}s`,
                 rubric_score: r.rubric_score,
-                keyword_recall: r.keyword_recall
+                keyword_recall: r.keyword_recall,
+                actual_output: r.actual_output || "*No output captured.*"
               }))
             });
             setIsRunning(false);
@@ -87,7 +91,8 @@ export default function EvalPage() {
                 score: 80 + (i * 3) % 15,
                 duration: `${(2.4 + i * 0.8).toFixed(1)}s`,
                 rubric_score: 85,
-                keyword_recall: 0.9
+                keyword_recall: 0.9,
+                actual_output: "*Fallback dummy output triggered because the Celery worker queue is saturated.*"
               }))
             });
             setIsRunning(false);
@@ -149,38 +154,60 @@ export default function EvalPage() {
                   return (
                     <motion.div 
                       key={tc.id}
-                      whileHover={{ scale: 1.01 }}
-                      className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:border-indigo-300 transition-colors"
+                      className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm hover:border-indigo-300 transition-colors overflow-hidden"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-slate-800">{tc.title}</h4>
-                          <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 rounded">{tc.id}</span>
-                        </div>
-                        <p className="text-sm text-slate-500">{tc.desc}</p>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 pl-4 ml-4 border-l border-slate-100">
-                        {res ? (
-                          <div className="flex items-center gap-3 text-right">
-                            <div>
-                              <div className="text-xs text-slate-400">Score</div>
-                              <div className="font-semibold text-indigo-600">{res.score}/100</div>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                              <CheckCircle2 size={18} />
-                            </div>
+                      <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => res?.actual_output ? setExpandedCaseId(expandedCaseId === tc.id ? null : tc.id) : null}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-800">{tc.title}</h4>
+                            <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 rounded">{tc.id}</span>
                           </div>
-                        ) : (
-                          <button 
-                            onClick={() => runBenchmark(tc.id)}
-                            disabled={isRunning || !projectId}
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors disabled:opacity-50"
-                          >
-                            <Play size={16} className="ml-0.5" />
-                          </button>
-                        )}
+                          <p className="text-sm text-slate-500">{tc.desc}</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 pl-4 ml-4 border-l border-slate-100">
+                          {res ? (
+                            <div className="flex items-center gap-3 text-right">
+                              <div>
+                                <div className="text-xs text-slate-400">Score</div>
+                                <div className="font-semibold text-indigo-600">{res.score}/100</div>
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                <CheckCircle2 size={18} />
+                              </div>
+                              <div className="text-slate-400">
+                                {expandedCaseId === tc.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              </div>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); runBenchmark(tc.id); }}
+                              disabled={isRunning || !projectId}
+                              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                            >
+                              <Play size={16} className="ml-0.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      <AnimatePresence>
+                        {expandedCaseId === tc.id && res?.actual_output && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="border-t border-slate-100 bg-slate-50 overflow-hidden"
+                          >
+                            <div className="p-6 prose prose-sm max-w-none prose-slate prose-pre:bg-slate-900 prose-pre:text-slate-100 text-xs">
+                              <h5 className="text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Agent Output</h5>
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {res.actual_output}
+                              </ReactMarkdown>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )
                 })}
