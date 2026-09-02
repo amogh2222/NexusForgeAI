@@ -102,7 +102,7 @@ class Neo4jClient:
                     log.warning("neo4j.schema_stmt_failed", error=str(e)[:80])
         log.info("neo4j.schema_ready")
 
-    # ─── Write Operations ─────────────────────────────────────────────────────
+    initialize_schema = setup_schema
 
     async def ingest_entities(self, entities: list[CodeEntity]) -> int:
         """Bulk MERGE entities into the graph. Idempotent."""

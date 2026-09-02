@@ -105,7 +105,7 @@ Analyze this failure, identify the root cause, and provide a complete fix.
                      confidence=report.confidence,
                      duration_ms=duration_ms)
 
-            from langchain_core.messages import AIMessage
+            code_section = f"\n### Fixed Code\n```python\n{report.fixed_code}\n```\n" if report.fixed_code else ""
             summary_msg = f"""## Debug Analysis
 
 **Root Cause**: {report.root_cause}
@@ -115,8 +115,8 @@ Analyze this failure, identify the root cause, and provide a complete fix.
 **Explanation**: {report.explanation}
 
 **Confidence**: {report.confidence}
-
-{f"**Fixed**: Applied fix to `{report.fixed_file_path}`" if report.fixed_file_path else ""}
+{code_section}
+{f"**Fixed File**: `{report.fixed_file_path}`" if report.fixed_file_path else ""}
 
 {chr(10).join(f"- {fix}" for fix in report.additional_fixes) if report.additional_fixes else ""}
 """

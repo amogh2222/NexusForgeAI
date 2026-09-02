@@ -231,23 +231,23 @@ class NexusOrchestrator:
         """Classify the task and determine which agent should handle it."""
         task = state["current_task"].lower()
 
-        # Rule-based routing (fast, predictable)
-        if any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash"]):
-            task_type = "debug"
-        elif any(kw in task for kw in ["generate", "write", "implement", "create", "code", "function", "class"]):
-            task_type = "codegen"
-        elif any(kw in task for kw in ["review", "audit", "check", "security", "performance", "optimize"]):
-            task_type = "review"
-        elif any(kw in task for kw in ["dockerfile", "deploy", "ci/cd", "kubernetes", "docker", "infra", "pipeline"]):
-            task_type = "infra"
-        elif any(kw in task for kw in ["readme", "documentation", "explain", "document", "architecture"]):
-            task_type = "readme"
-        elif any(kw in task for kw in ["system design", "hld", "scale", "architect", "scale to"]):
+        # Specific domain tasks MUST be checked before generic verbs (generate, write, create)
+        if any(kw in task for kw in ["system design", "hld", "scale to", "architect"]):
             task_type = "sysdesign"
+        elif any(kw in task for kw in ["readme", "documentation", "generate docs", "document"]):
+            task_type = "readme"
+        elif any(kw in task for kw in ["dockerfile", "docker-compose", "deploy", "kubernetes", "ci/cd", "pipeline", "infra"]):
+            task_type = "infra"
+        elif any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash", "vulnerability", "bug"]):
+            task_type = "debug"
+        elif any(kw in task for kw in ["review", "audit", "check code", "security audit", "optimize"]):
+            task_type = "review"
         elif any(kw in task for kw in ["history", "evolution", "time machine", "drift", "commits"]):
             task_type = "time_machine"
-        elif any(kw in task for kw in ["github", "pr", "pull request", "issue", "kubernetes", "pod", "aws"]):
+        elif any(kw in task for kw in ["pull request", "issue", "kubernetes pod"]):
             task_type = "plugin"
+        elif any(kw in task for kw in ["generate", "write", "implement", "create", "code", "function", "class", "script"]):
+            task_type = "codegen"
         else:
             task_type = "chat"
 
@@ -286,53 +286,119 @@ class NexusOrchestrator:
         return "finalize"
 
     async def _finalizer_node(self, state: NexusState) -> dict:
-        """Aggregate all agent outputs into a final response message."""
-        parts = []
+        """Aggregate all agent outputs into a complete, rich, user-facing response."""
+        content_blocks = []
 
-        if state.get("plan"):
-            parts.append(f"📋 **Plan Created**: {len(state['plan'].get('steps', []))} steps")
+        # 1. README / Documentation Content
+        if state.get("readme_content"):
+            content_blocks.append(state["readme_content"])
 
+        # 2. System Design Output
+        if state.get("sysdesign_result"):
+            content_blocks.append(state["sysdesign_result"])
+
+        # 3. Generated Code Content (full files with syntax highlighting)
         if state.get("generated_code"):
-            files = state["generated_code"].get("files", [])
-            parts.append(f"💻 **Code Generated**: {len(files)} file(s)")
-            
+            gen = state["generated_code"]
+            files = gen.get("files", [])
+            if files:
+                code_parts = [f"## Generated Implementation: {gen.get('task_description', 'Code Solution')}\n"]
+                for f in files:
+                    f_path = f.get("path", "file.py")
+                    f_lang = f.get("language") or ("python" if f_path.endswith(".py") else "text")
+                    f_content = f.get("content", "")
+                    f_expl = f.get("explanation", "")
+                    code_parts.append(f"### `{f_path}`\n```{f_lang}\n{f_content}\n```")
+                    if f_expl:
+                        code_parts.append(f"{f_expl}\n")
+                if gen.get("dependencies"):
+                    code_parts.append(f"**Dependencies**: `{', '.join(gen['dependencies'])}`\n")
+                if gen.get("setup_instructions"):
+                    code_parts.append(f"**Setup Instructions**:\n{gen['setup_instructions']}\n")
+                content_blocks.append("\n".join(code_parts))
+
+            # Auto-save files if repository_id present
             if state.get("repository_id") and files:
                 try:
-                    from backend.core.database import SessionLocal
+                    from backend.core.database import AsyncSessionLocal
                     from backend.core.file_applier import FileApplier
-                    async with SessionLocal() as db:
+                    async with AsyncSessionLocal() as db:
                         applier = FileApplier(db)
-                        success = await applier.apply_changes(state["repository_id"], state["generated_code"])
-                        if success:
-                            parts.append("💾 **Files automatically saved to repository workspace**")
+                        await applier.apply_changes(state["repository_id"], state["generated_code"])
                 except Exception as e:
                     log.error("finalizer.file_applier_failed", error=str(e))
 
-        if state.get("review_results"):
-            issues = state["review_results"].get("issues", [])
-            parts.append(f"🔍 **Review Complete**: {len(issues)} issue(s) found")
-
-        if state.get("readme_content"):
-            parts.append(f"📄 **README Generated**: {len(state['readme_content'])} characters")
-
-        if state.get("infra_bundle"):
-            parts.append("🐳 **Infrastructure Generated**: Dockerfile + docker-compose + CI/CD")
-
+        # 4. Debug Report (root cause, explanation, and fixed code)
         if state.get("debug_report"):
-            parts.append(f"🐛 **Debug Complete**: {state['debug_report'].get('root_cause', 'Issue identified')}")
+            rep = state["debug_report"]
+            debug_parts = [
+                "## Debug & Fix Report\n",
+                f"**Root Cause**: {rep.get('root_cause', 'Unknown')}\n",
+                f"**Error Type**: {rep.get('error_type', 'General')}\n",
+                f"**Explanation**: {rep.get('explanation', '')}\n",
+            ]
+            if rep.get("fixed_code"):
+                debug_parts.append(f"### Fixed Code\n```python\n{rep['fixed_code']}\n```\n")
+            if rep.get("additional_fixes"):
+                debug_parts.append("**Recommended Additional Fixes**:\n" + "\n".join(f"- {fix}" for fix in rep["additional_fixes"]) + "\n")
+            content_blocks.append("\n".join(debug_parts))
 
-        if state.get("sysdesign_result"):
-            parts.append("🏗️ **System Design Complete**: Generated HLD")
+        # 5. Infrastructure Bundle
+        if state.get("infra_bundle"):
+            infra = state["infra_bundle"]
+            infra_parts = ["## Infrastructure Configurations\n"]
+            if infra.get("dockerfile"):
+                infra_parts.append(f"### Dockerfile\n```dockerfile\n{infra['dockerfile']}\n```\n")
+            if infra.get("docker_compose"):
+                infra_parts.append(f"### docker-compose.yml\n```yaml\n{infra['docker_compose']}\n```\n")
+            if infra.get("ci_cd"):
+                infra_parts.append(f"### CI/CD Pipeline\n```yaml\n{infra['ci_cd']}\n```\n")
+            if infra.get("setup_instructions"):
+                infra_parts.append(f"**Deployment Instructions**:\n{infra['setup_instructions']}\n")
+            content_blocks.append("\n".join(infra_parts))
 
+        # 6. Review Results (score, issues, recommendations)
+        if state.get("review_results"):
+            rev = state["review_results"]
+            rev_parts = [
+                "## Code Review Report\n",
+                f"**Overall Score**: {rev.get('overall_score', 'N/A')}/100\n",
+                f"**Summary**: {rev.get('summary', 'Review complete.')}\n",
+            ]
+            issues = rev.get("issues", [])
+            if issues:
+                rev_parts.append(f"### Issues Identified ({len(issues)})\n")
+                for iss in issues:
+                    sev = iss.get('severity', 'info').upper()
+                    cat = iss.get('category', 'general')
+                    desc = iss.get('description', '')
+                    sug = iss.get('suggestion', '')
+                    loc = iss.get('location', '')
+                    loc_str = f" (`{loc}`)" if loc else ""
+                    rev_parts.append(f"- **[{sev}]** {cat}{loc_str}: {desc}")
+                    if sug:
+                        rev_parts.append(f"  *Fix Suggestion*: {sug}")
+            recs = rev.get("recommendations", [])
+            if recs:
+                rev_parts.append("\n### Recommendations\n" + "\n".join(f"- {r}" for r in recs))
+            content_blocks.append("\n".join(rev_parts))
+
+        # 7. Time Machine Result
         if state.get("time_machine_result"):
-            parts.append("⏳ **Time Machine Analysis Complete**: Analyzed architectural drift")
+            content_blocks.append(f"## Time Machine Analysis\n\n{state['time_machine_result']}")
 
-        if not parts:
-            parts.append("✅ Task complete")
+        # 8. Execution Summary Footer
+        meta_items = []
+        if state.get("agent_history"):
+            agents_chain = " ➔ ".join(state["agent_history"] + ["finalizer"])
+            meta_items.append(f"**Agent Pipeline**: `{agents_chain}`")
 
-        summary = "\n".join(parts)
+        final_content = "\n\n---\n\n".join(content_blocks) if content_blocks else "✅ Task completed successfully."
+        if meta_items:
+            final_content += "\n\n> " + " | ".join(meta_items)
+
         return {
-            "messages": [AIMessage(content=summary)],
+            "messages": [AIMessage(content=final_content)],
             "agent_history": state["agent_history"] + ["finalizer"],
         }
 

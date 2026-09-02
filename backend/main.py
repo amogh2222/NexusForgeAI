@@ -179,6 +179,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router,         prefix="/api/v1/auth",         tags=["auth"])
     app.include_router(projects_router,     prefix="/api/v1/projects",     tags=["projects"])
     app.include_router(repositories_router, prefix="/api/v1/repos",        tags=["repositories"])
+    app.include_router(repositories_router, prefix="/api/v1/repositories", tags=["repositories"])
     app.include_router(github_router,       prefix="/api/v1/github",       tags=["github"])
     app.include_router(github_auth_router,  prefix="/api/v1",              tags=["auth"])
     # ─── v2 Routes ───────────────────────────────────────────────────────────

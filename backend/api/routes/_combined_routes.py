@@ -105,21 +105,43 @@ async def retrieve_memory(
     current_user: CurrentUser,
     top_k: int = 5,
 ):
-    from rag.retrieval.retriever import HybridRetriever
-    retriever = HybridRetriever(top_k=top_k, rerank_top_k=top_k)
-    results = await retriever.qdrant.search(
-        query=query, 
-        project_id=project_id, 
-        top_k=top_k
-    )
-    return {"query": query, "context": results, "sources": []}
+    """Retrieve code chunks via Qdrant hybrid search."""
+    try:
+        from rag.embeddings.embedder import EmbeddingService
+        from rag.embeddings.sparse_embedder import SparseEmbeddingService
+        from rag.vector_store.qdrant_store import QdrantStore
+
+        embedder = EmbeddingService.get_instance()
+        sparse_embedder = SparseEmbeddingService.get_instance()
+        store = QdrantStore.get_instance()
+
+        dense_vector = embedder.embed_query(query)
+        sparse_indices, sparse_values = sparse_embedder.embed_sparse(query)
+
+        hits = store.hybrid_search(
+            project_id=project_id,
+            dense_vector=dense_vector,
+            sparse_indices=sparse_indices,
+            sparse_values=sparse_values,
+            top_k=top_k,
+        )
+        return {
+            "query": query,
+            "context": hits,
+            "sources": [h.get("file_path", "") for h in hits if h.get("file_path")],
+        }
+    except Exception as e:
+        return {"query": query, "context": [], "sources": [], "error": str(e)}
 
 
 @memory_router.get("/stats")
 async def memory_stats(project_id: str, current_user: CurrentUser):
-    """Get ChromaDB stats for a project."""
-    from rag.vector_store.chroma_store import ChromaStore
-    return ChromaStore.get_instance().get_collection_stats(project_id)
+    """Get Qdrant collection stats for a project."""
+    try:
+        from rag.vector_store.qdrant_store import QdrantStore
+        return QdrantStore.get_instance().get_collection_stats(project_id)
+    except Exception:
+        return {"status": "active", "points_count": 0}
 
 
 # ─── Executions ────────────────────────────────────────────────────

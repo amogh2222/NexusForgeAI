@@ -125,15 +125,14 @@ Be specific, reference actual files and code when relevant.
 
             log.info("docs.complete", chars=len(content), duration_ms=duration_ms)
 
+            from langchain_core.messages import AIMessage
             result = {
                 "agent_history": state.get("agent_history", []) + [self.AGENT_NAME],
+                "messages": [AIMessage(content=content)],
             }
 
             if is_readme_request:
                 result["readme_content"] = content
-            else:
-                from langchain_core.messages import AIMessage
-                result["messages"] = [AIMessage(content=content)]
 
             return result
 

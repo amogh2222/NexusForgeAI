@@ -78,10 +78,22 @@ Include Dockerfile, docker-compose.yml, and GitHub Actions CI/CD at minimum.
             log.info("infra.complete", duration_ms=duration_ms)
 
             from langchain_core.messages import AIMessage
-            components = [k for k, v in bundle.model_dump().items() if v and k != "notes"]
+            components = [k for k, v in bundle.model_dump().items() if v and k not in ["notes", "setup_instructions"]]
+            
+            infra_sections = []
+            if bundle.dockerfile:
+                infra_sections.append(f"### Dockerfile\n```dockerfile\n{bundle.dockerfile}\n```")
+            if bundle.docker_compose:
+                infra_sections.append(f"### docker-compose.yml\n```yaml\n{bundle.docker_compose}\n```")
+            if bundle.ci_cd:
+                infra_sections.append(f"### CI/CD Pipeline\n```yaml\n{bundle.ci_cd}\n```")
+            full_infra_text = "\n\n".join(infra_sections)
+
             summary_msg = f"""## Infrastructure Generated
 
 **Components**: {', '.join(components)}
+
+{full_infra_text}
 
 {bundle.notes}
 

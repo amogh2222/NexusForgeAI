@@ -95,12 +95,21 @@ Follow the patterns and conventions shown in the repository context above.
 
             from langchain_core.messages import AIMessage
             files_summary = "\n".join(f"- `{f.path}` ({f.action}): {f.explanation[:80]}" for f in result.files)
+            
+            code_blocks = []
+            for f in result.files:
+                f_lang = f.language or ("python" if f.path.endswith(".py") else "text")
+                code_blocks.append(f"### `{f.path}`\n```{f_lang}\n{f.content}\n```\n{f.explanation}")
+            full_code_section = "\n\n".join(code_blocks)
+
             summary_msg = f"""## Code Generated
 
 **Task**: {result.task_description}
 
 **Files Modified/Created**:
 {files_summary}
+
+{full_code_section}
 
 {result.notes}
 """

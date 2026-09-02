@@ -6,11 +6,13 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.dependencies import get_current_user
 from backend.core.security import (
     create_access_token,
     create_refresh_token,
     verify_refresh_token,
 )
+from backend.models import User
 from backend.services.auth_service import AuthService
 
 router = APIRouter()
@@ -108,9 +110,16 @@ async def refresh_token(request: RefreshRequest):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    db: Annotated[AsyncSession, Depends(get_db)],
-    credentials=Depends(__import__("fastapi.security", fromlist=["HTTPBearer"]).HTTPBearer()),
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Get the current authenticated user's profile."""
-    # Delegated to dependency
-    raise HTTPException(status_code=501, detail="Use /api/auth/me with proper auth")
+    return UserResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        username=current_user.username,
+        full_name=current_user.full_name,
+        avatar_url=current_user.avatar_url,
+        github_username=current_user.github_username,
+        is_verified=current_user.is_verified,
+        created_at=current_user.created_at.isoformat() if current_user.created_at else "",
+    )

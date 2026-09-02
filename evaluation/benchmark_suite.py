@@ -208,7 +208,7 @@ async def _score_with_rubric(rubric_name: str, output: str, prompt: str) -> floa
             from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(model="gpt-4o-mini", api_key=settings.OPENAI_API_KEY, temperature=0)
         else:
-            from langchain_community.chat_models import ChatOllama
+            from langchain_ollama import ChatOllama
             llm = ChatOllama(model=settings.OLLAMA_MODEL, base_url=settings.OLLAMA_BASE_URL, temperature=0)
 
         response = await llm.ainvoke([HumanMessage(content=judge_prompt)])
