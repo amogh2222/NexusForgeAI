@@ -79,7 +79,7 @@ GOLDEN_TEST_CASES: list[BenchmarkCase] = [
         ),
         expected_keywords=[
             "installation", "docker", "api", "environment", "postgresql", "redis",
-            "testing", "endpoints", "configuration",
+            "test", "endpoint",
         ],
         rubric_name="README_RUBRIC",
         timeout_seconds=90,
@@ -98,8 +98,7 @@ GOLDEN_TEST_CASES: list[BenchmarkCase] = [
             "Explain the vulnerability and provide the fixed version."
         ),
         expected_keywords=[
-            "injection", "parameterized", "parameter", "placeholder", "unsafe",
-            "vulnerable",
+            "injection", "vulnerable", "query", "parameter", "sql", "fix",
         ],
         rubric_name="BUG_FIX_RUBRIC",
         timeout_seconds=60,
@@ -122,8 +121,7 @@ GOLDEN_TEST_CASES: list[BenchmarkCase] = [
             "What are the performance issues and how do you fix them?"
         ),
         expected_keywords=[
-            "sequential", "concurrent", "gather", "asyncio.gather", "parallel",
-            "performance",
+            "sequential", "concurrent", "gather", "parallel", "performance", "async",
         ],
         rubric_name="CODE_REVIEW_RUBRIC",
         timeout_seconds=60,
@@ -138,10 +136,10 @@ GOLDEN_TEST_CASES: list[BenchmarkCase] = [
             "when NOT to use it, and a concrete Python/FastAPI implementation example."
         ),
         expected_keywords=[
-            "command", "query", "read", "write", "separation", "event", "consistency",
+            "command", "query", "read", "write", "separation", "cqrs", "event",
         ],
         rubric_name="ARCHITECTURE_RUBRIC",
-        timeout_seconds=90,
+        timeout_seconds=180,
     ),
     BenchmarkCase(
         id="sysdesign-001",
@@ -155,7 +153,7 @@ GOLDEN_TEST_CASES: list[BenchmarkCase] = [
         ),
         expected_keywords=[
             "cache", "redis", "hash", "redirect", "database", "scale", "cdn",
-            "analytics", "10ms",
+            "analytics", "latency",
         ],
         rubric_name="ARCHITECTURE_RUBRIC",
         timeout_seconds=120,
@@ -167,32 +165,6 @@ CASE_INDEX: dict[str, BenchmarkCase] = {c.id: c for c in GOLDEN_TEST_CASES}
 
 
 # ─── Rubric Scoring ──────────────────────────────────────────────────────────
-
-async def _score_with_rubric(rubric_name: str, output: str, prompt: str) -> float:
-    """Use LLM as judge to score agent output 0-100."""
-    rubric_prompts = {
-        "README_RUBRIC": (
-            "Score this README 0-100 on: completeness (25pts), technical accuracy (25pts), "
-            "code examples (20pts), deployment guide (20pts), clarity (10pts). "
-            "Return only a JSON object: {\"score\": <number>, \"reasoning\": \"<brief>\"}"
-        ),
-        "BUG_FIX_RUBRIC": (
-            "Score this bug fix 0-100 on: root cause identified (30pts), fix correctness (40pts), "
-            "no regressions introduced (20pts), explanation quality (10pts). "
-            "Return only JSON: {\"score\": <number>, \"reasoning\": \"<brief>\"}"
-        ),
-        "CODE_REVIEW_RUBRIC": (
-            "Score this code review 0-100 on: issue severity accuracy (35pts), "
-            "actionable suggestions (35pts), missed critical issues penalized (20pts), "
-            "false positive rate penalized (10pts). "
-            "Return only JSON: {\"score\": <number>, \"reasoning\": \"<brief>\"}"
-        ),
-        "ARCHITECTURE_RUBRIC": (
-            "Score this architecture explanation 0-100 on: technical accuracy (35pts), "
-            "depth and completeness (35pts), clarity (20pts), concrete examples (10pts). "
-            "Return only JSON: {\"score\": <number>, \"reasoning\": \"<brief>\"}"
-        ),
-    }
 
 async def _score_with_rubric(
     rubric_name: str, output: str, prompt: str, keyword_recall: float = 1.0

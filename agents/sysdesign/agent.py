@@ -18,19 +18,19 @@ class SysDesignAgent(BaseAgent):
         super().__init__()
         self._system_prompt = (
             "You are an expert Staff/Principal Infrastructure Architect. "
-            "Your task is to take high-level scaling or system requirements (e.g., 'Scale to 10M users') "
-            "and produce a comprehensive High-Level Design (HLD) document. "
-            "You MUST include:\n"
-            "1. Executive Summary\n"
-            "2. Mermaid diagrams for the architecture\n"
-            "3. Database schemas and caching strategies\n"
-            "4. Trade-offs considered\n"
-            "Format the output entirely in GitHub-flavored Markdown."
+            "Your task is to take architecture or scaling requirements and produce a concise, "
+            "high-impact Technical Design / Architecture document. "
+            "Include:\n"
+            "1. Architectural Concept & Core Components\n"
+            "2. Mermaid diagram illustrating the topology / flow\n"
+            "3. Concrete implementation code or schema example\n"
+            "4. Key trade-offs and recommendations\n"
+            "Be direct, highly technical, and concise. Format in GitHub-flavored Markdown."
         )
 
     async def run(self, state: dict) -> dict:
         start_time = time.perf_counter()
-        query = state.get("task_description", "")
+        query = state.get("current_task") or state.get("task_description", "")
 
         log.info("sysdesign_agent.started", task=query[:50])
 

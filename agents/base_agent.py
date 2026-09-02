@@ -164,13 +164,13 @@ Sources:
             
             return self._generate_dummy_output(structured_output_schema)
 
-    def _generate_dummy_output(self, schema: Any) -> Any:
-        """Generate a best-effort dummy object when the LLM API fails."""
+    def _generate_dummy_output(self, schema: Any, error_msg: str = "") -> Any:
+        """Generate a safe diagnostic fallback object when the LLM service is temporarily unreachable."""
+        diagnostic = f"⚠️ LLM service unreachable ({error_msg or 'check Ollama connection on port 11434'})."
         if schema is None:
-            return AIMessage(content="[LLM API Quota Exhausted or Error: Fallback Dummy Response]")
+            return AIMessage(content=diagnostic)
         
         try:
-            # Recursively build dummy Pydantic model
             fields = schema.model_fields
             dummy_data = {}
             for field_name, field_info in fields.items():
@@ -186,7 +186,7 @@ Sources:
                     elif "dict" in annotation_str:
                         dummy_data[field_name] = {}
                     elif "str" in annotation_str:
-                        dummy_data[field_name] = "[Fallback Data]"
+                        dummy_data[field_name] = diagnostic
                     elif "int" in annotation_str or "float" in annotation_str:
                         dummy_data[field_name] = 0
                     elif "bool" in annotation_str:

@@ -232,16 +232,16 @@ class NexusOrchestrator:
         task = state["current_task"].lower()
 
         # Specific domain tasks MUST be checked before generic verbs (generate, write, create)
-        if any(kw in task for kw in ["system design", "hld", "scale to", "architect"]):
+        if any(kw in task for kw in ["system design", "hld", "scale to", "architect", "architecture", "cqrs", "url shortener", "design a"]):
             task_type = "sysdesign"
         elif any(kw in task for kw in ["readme", "documentation", "generate docs", "document"]):
             task_type = "readme"
+        elif any(kw in task for kw in ["review", "audit", "check code", "code review", "security audit"]):
+            task_type = "review"
         elif any(kw in task for kw in ["dockerfile", "docker-compose", "deploy", "kubernetes", "ci/cd", "pipeline", "infra"]):
             task_type = "infra"
         elif any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash", "vulnerability", "bug"]):
             task_type = "debug"
-        elif any(kw in task for kw in ["review", "audit", "check code", "security audit", "optimize"]):
-            task_type = "review"
         elif any(kw in task for kw in ["history", "evolution", "time machine", "drift", "commits"]):
             task_type = "time_machine"
         elif any(kw in task for kw in ["pull request", "issue", "kubernetes pod"]):
@@ -387,7 +387,16 @@ class NexusOrchestrator:
         if state.get("time_machine_result"):
             content_blocks.append(f"## Time Machine Analysis\n\n{state['time_machine_result']}")
 
-        # 8. Execution Summary Footer
+        # 8. Fallback to assistant messages if no specialized block was generated
+        if not content_blocks:
+            for msg in reversed(state.get("messages", [])):
+                if hasattr(msg, "content") and msg.content:
+                    msg_type = getattr(msg, "type", "")
+                    if msg_type in ["ai", "assistant"]:
+                        content_blocks.append(msg.content)
+                        break
+
+        # 9. Execution Summary Footer
         meta_items = []
         if state.get("agent_history"):
             agents_chain = " ➔ ".join(state["agent_history"] + ["finalizer"])

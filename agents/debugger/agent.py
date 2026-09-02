@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from agents.base_agent import BaseAgent

@@ -97,11 +97,13 @@ async def run_benchmark(body: BenchmarkRunRequest, background_tasks: BackgroundT
         # Build agent function from NexusForge workspace chat
         async def agent_fn(prompt: str) -> str:
             try:
+                import uuid as _uuid
                 from agents.orchestrator import get_orchestrator
                 orch = get_orchestrator()
+                case_thread_id = f"eval-{_uuid.uuid4().hex[:8]}"
                 state = await orch.arun(
                     project_id=body.project_id,
-                    thread_id="eval-thread",
+                    thread_id=case_thread_id,
                     user_message=prompt,
                 )
                 messages = state.get("messages", [])
