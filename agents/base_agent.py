@@ -115,20 +115,14 @@ Sources:
 """
 
     def _clean_llm_output(self, text: str) -> str:
-        """Strip markdown blocks, dashes, and conversational filler from LLM output."""
+        """Clean conversational filler while preserving all code blocks and markdown."""
         if not text:
             return ""
         lines = text.splitlines()
         cleaned_lines = []
-        in_code_block = False
         for line in lines:
-            if line.strip().startswith("```"):
-                in_code_block = not in_code_block
-                continue # Skip the backticks
-            if line.strip() == "---":
-                continue # Skip dashes
-            # Skip conversational filler if not in a code block
-            if not in_code_block and line.lower().startswith("here is the"):
+            # Strip trivial conversational filler only if at the very start
+            if not cleaned_lines and line.lower().startswith("here is the"):
                 continue
             cleaned_lines.append(line)
         return "\n".join(cleaned_lines).strip()

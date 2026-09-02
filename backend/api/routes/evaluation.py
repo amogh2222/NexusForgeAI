@@ -112,39 +112,51 @@ async def run_benchmark(body: BenchmarkRunRequest, background_tasks: BackgroundT
                 import traceback
                 return f"Agent error: {e}\n{traceback.format_exc()}"
 
+        async def _on_progress(runs, completed, total):
+            try:
+                store = TaskResultStore()
+                scores = [r.overall_score for r in runs if r.error is None]
+                passed = sum(1 for r in runs if r.passed)
+                is_done = completed >= total
+                latencies = sorted([r.latency_ms for r in runs if r.error is None])
+                p95 = latencies[int(len(latencies) * 0.95)] if latencies else 0.0
+
+                await store.save(body.suite_id, {
+                    "suite_id": body.suite_id,
+                    "status": "complete" if is_done else "running",
+                    "total": total,
+                    "completed": completed,
+                    "passed": passed,
+                    "pass_rate": round(passed / completed, 3) if completed else 0.0,
+                    "mean_score": round(sum(scores) / len(scores), 1) if scores else 0.0,
+                    "p95_latency_ms": round(p95, 0),
+                    "runs": [
+                        {
+                            "case_id": r.case_id,
+                            "case_name": r.case_name,
+                            "passed": r.passed,
+                            "overall_score": round(r.overall_score, 1),
+                            "keyword_recall": round(r.keyword_recall, 3),
+                            "rubric_score": round(r.rubric_score, 1),
+                            "latency_ms": round(r.latency_ms, 0),
+                            "error": r.error,
+                            "actual_output": getattr(r, "agent_output", ""),
+                        }
+                        for r in runs
+                    ],
+                })
+            except Exception:
+                pass
+
         report = await suite.run(
             suite_id=body.suite_id,
             agent_fn=agent_fn,
             case_ids=body.case_ids,
+            on_progress=_on_progress,
         )
 
-        # Store result for polling
-        try:
-            store = TaskResultStore()
-            await store.save(body.suite_id, {
-                "suite_id":     report.suite_id,
-                "total":        report.total_cases,
-                "passed":       report.passed_cases,
-                "pass_rate":    round(report.pass_rate, 3),
-                "mean_score":   round(report.mean_score, 1),
-                "p95_latency_ms": round(report.p95_latency_ms, 0),
-                "runs": [
-                    {
-                        "case_id":       r.case_id,
-                        "case_name":     r.case_name,
-                        "passed":        r.passed,
-                        "overall_score": round(r.overall_score, 1),
-                        "keyword_recall": round(r.keyword_recall, 3),
-                        "rubric_score":  round(r.rubric_score, 1),
-                        "latency_ms":    round(r.latency_ms, 0),
-                        "error":         r.error,
-                        "actual_output": getattr(r, "agent_output", ""),
-                    }
-                    for r in report.runs
-                ],
-            })
-        except Exception:
-            pass   # Result store is optional
+        # Final store update marked complete
+        await _on_progress(report.runs, len(report.runs), len(report.runs))
 
     background_tasks.add_task(_run)
 
@@ -185,7 +197,7 @@ async def get_benchmark_status(suite_id: str):
         store = TaskResultStore()
         result = await store.get(suite_id)
         if result:
-            return {"status": "complete", **result}
-        return {"status": "running", "suite_id": suite_id}
+            return result
+        return {"status": "running", "suite_id": suite_id, "completed": 0, "runs": []}
     except Exception:
         return {"status": "unknown", "suite_id": suite_id}

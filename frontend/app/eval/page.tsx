@@ -55,16 +55,18 @@ export default function EvalPage() {
       
       await api.evaluation.runBenchmark(payload);
       
-      // Poll actual backend status
+      // Poll actual backend status with incremental real results
       let pollCount = 0;
       const poll = async () => {
         pollCount++;
         try {
           const statusRes = await api.evaluation.getStatus(suiteId);
-          if (statusRes.status === "complete" && statusRes.runs) {
+          
+          // Render real completed cases live as they finish
+          if (statusRes && statusRes.runs && statusRes.runs.length > 0) {
             setResults({
-              overall_score: statusRes.mean_score || 88,
-              pass_rate: statusRes.pass_rate,
+              overall_score: Math.round(statusRes.mean_score || 0),
+              pass_rate: statusRes.pass_rate || 0,
               cases: statusRes.runs.map((r: any) => ({
                 id: r.case_id,
                 name: r.case_name,
@@ -73,35 +75,25 @@ export default function EvalPage() {
                 duration: `${((r.latency_ms || 1000) / 1000).toFixed(1)}s`,
                 rubric_score: r.rubric_score,
                 keyword_recall: r.keyword_recall,
-                actual_output: r.actual_output || "*No output captured.*"
+                actual_output: r.actual_output || "*Execution in progress...*"
               }))
             });
+          }
+
+          if (statusRes.status === "complete") {
             setIsRunning(false);
-          } else if (pollCount < 40) {
+          } else if (pollCount < 200) {
+            // Keep polling while cases are executing in background (up to 5 mins)
             setTimeout(poll, 1500);
           } else {
-            // Default deterministic fallback from actual case index if worker was saturated
-            setResults({
-              overall_score: 87,
-              pass_rate: 0.8,
-              cases: (caseId ? [TEST_CASES.find(c => c.id === caseId)] : TEST_CASES).map((c, i) => ({
-                id: c?.id,
-                name: c?.title,
-                status: "PASS",
-                score: 80 + (i * 3) % 15,
-                duration: `${(2.4 + i * 0.8).toFixed(1)}s`,
-                rubric_score: 85,
-                keyword_recall: 0.9,
-                actual_output: "*Fallback dummy output triggered because the Celery worker queue is saturated.*"
-              }))
-            });
+            setError("Evaluation timed out after 5 minutes. The model may be busy.");
             setIsRunning(false);
           }
-        } catch (e) {
-          if (pollCount < 40) {
+        } catch (e: any) {
+          if (pollCount < 200) {
             setTimeout(poll, 1500);
           } else {
-            setError("Failed to retrieve benchmark results from server.");
+            setError("Failed to retrieve benchmark results from server: " + (e.message || e));
             setIsRunning(false);
           }
         }
