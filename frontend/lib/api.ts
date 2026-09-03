@@ -1,4 +1,16 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const proto = window.location.protocol;
+    const hostname = window.location.hostname;
+    if (window.location.port === "3000") {
+      return `${proto}//${hostname}:8000/api/v1`;
+    }
+    return `${proto}//${window.location.host}/api/v1`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+}
+
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 let globalToken = "";
 
@@ -24,7 +36,8 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
     headers,
   });
@@ -56,7 +69,8 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 export const api = {
   auth: {
     async register(data: any) {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -67,7 +81,8 @@ export const api = {
       return response;
     },
     async login(data: any) {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -109,7 +124,8 @@ export const api = {
       formData.append("file", file);
       
       const token = getAuthToken();
-      return fetch(`${API_URL}/repos/upload`, {
+      const baseUrl = getApiBaseUrl();
+      return fetch(`${baseUrl}/repos/upload`, {
         method: "POST",
         headers: token ? { "Authorization": `Bearer ${token}` } : {},
         body: formData,
@@ -153,10 +169,21 @@ export const api = {
       });
     }
   },
+  health: {
+    getDetailed() {
+      return fetchAPI("/health/detailed");
+    },
+    get() {
+      return fetchAPI("/health");
+    },
+  },
   memory: {
     retrieve(projectId: string, query: string, topK: number = 5) {
       return fetchAPI(`/memory/retrieve?project_id=${projectId}&query=${encodeURIComponent(query)}&top_k=${topK}`);
-    }
+    },
+    getStats(projectId: string) {
+      return fetchAPI(`/memory/stats?project_id=${projectId}`);
+    },
   },
   executions: {
     create(data: { project_id: string, runtime: string, code: string, stdin?: string }) {

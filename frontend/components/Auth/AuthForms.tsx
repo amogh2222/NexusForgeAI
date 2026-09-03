@@ -16,9 +16,34 @@ export function AuthForms() {
   const router = useRouter();
 
   const handleGithubLogin = () => {
-    // Redirect to backend GitHub OAuth endpoint
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    window.location.href = `${API_URL}/auth/github/login`;
+    const proto = typeof window !== "undefined" ? window.location.protocol : "http:";
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost";
+    const apiUrl = typeof window !== "undefined" && window.location.port === "3000"
+      ? `${proto}//${hostname}:8000/api/v1`
+      : `${proto}//${typeof window !== "undefined" ? window.location.host : "localhost:8000"}/api/v1`;
+    window.location.href = `${apiUrl}/auth/github/login`;
+  };
+
+  const handleDemoSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      try {
+        await api.auth.login({ email: "demo@nexusforge.ai", password: "password123" });
+      } catch {
+        await api.auth.register({
+          email: "demo@nexusforge.ai",
+          username: "demodev",
+          password: "password123",
+        });
+        await api.auth.login({ email: "demo@nexusforge.ai", password: "password123" });
+      }
+      window.location.href = "/";
+    } catch (err: any) {
+      setError(err.message || "Demo sign-in failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,18 +85,29 @@ export function AuthForms() {
           </p>
         </div>
 
-        <button 
-          onClick={handleGithubLogin}
-          type="button"
-          className="w-full mb-6 flex items-center justify-center gap-3 bg-slate-900 text-white rounded-xl py-3 px-4 hover:bg-slate-800 transition-all shadow-md hover:shadow-lg"
-        >
-          <Github size={20} />
-          <span className="font-medium">Continue with GitHub</span>
-        </button>
+        <div className="space-y-3 mb-6">
+          <button 
+            onClick={handleGithubLogin}
+            type="button"
+            className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white rounded-xl py-3 px-4 hover:bg-slate-800 transition-all shadow-md hover:shadow-lg font-medium"
+          >
+            <Github size={20} />
+            <span>Continue with GitHub</span>
+          </button>
 
-        <div className="relative flex items-center py-4 mb-2">
+          <button
+            onClick={handleDemoSignIn}
+            type="button"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200 rounded-xl py-2.5 px-4 text-xs font-semibold transition-all shadow-xs"
+          >
+            <span>⚡ Quick Demo Sign-in (1-Click)</span>
+          </button>
+        </div>
+
+        <div className="relative flex items-center py-2 mb-2">
           <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">OR</span>
+          <span className="flex-shrink-0 mx-4 text-slate-400 text-xs">OR SIGN IN WITH EMAIL</span>
           <div className="flex-grow border-t border-slate-200"></div>
         </div>
 

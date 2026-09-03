@@ -29,6 +29,26 @@ export default function Home() {
     }
   };
 
+  const [systemHealth, setSystemHealth] = useState<{
+    status: string;
+    checks: Record<string, string>;
+  } | null>(null);
+
+  // Poll for live system health
+  useEffect(() => {
+    async function checkHealth() {
+      try {
+        const res = await api.health.getDetailed();
+        setSystemHealth(res);
+      } catch (err) {
+        console.error("Health check error:", err);
+      }
+    }
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // WebSocket for Real-Time Indexing Progress
   const { isConnected, lastEvent } = useWebSocket(projectId);
   const [indexingState, setIndexingState] = useState<{
@@ -317,35 +337,44 @@ export default function Home() {
           </div>
 
           <div className="glass rounded-2xl p-6 h-fit shadow-lg">
-              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                <Database size={20} className="text-blue-500" />
-                System Status
-              </h3>
-              <div className="space-y-5">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500">Backend API</span>
-                    <span className="text-emerald-600 font-medium">Connected</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500">PostgreSQL</span>
-                    <span className="text-emerald-600 font-medium">Online</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500">Qdrant Vectors</span>
-                    <span className="text-emerald-600 font-medium">Online</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500">Redis / Celery</span>
-                    <span className="text-emerald-600 font-medium">Active</span>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-900">
+                  <Database size={20} className="text-indigo-500" />
+                  System Health
+                </h3>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1.5 ${
+                  systemHealth?.status === "healthy"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    systemHealth?.status === "healthy" ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                  }`} />
+                  {systemHealth?.status === "healthy" ? "All Systems Operational" : "Checking..."}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { key: "api", name: "FastAPI Backend", fallback: "Connected" },
+                  { key: "database", name: "PostgreSQL Database", fallback: "Online" },
+                  { key: "redis", name: "Redis & Celery Swarm", fallback: "Active" },
+                  { key: "qdrant", name: "Qdrant Vector DB", fallback: "Online" },
+                  { key: "neo4j", name: "Neo4j Knowledge Graph", fallback: "Online" },
+                ].map((svc) => {
+                  const check = systemHealth?.checks?.[svc.key];
+                  const isOk = check === "ok" || (!systemHealth && true);
+                  return (
+                    <div key={svc.key} className="flex items-center justify-between text-sm py-1 border-b border-slate-100 last:border-0">
+                      <span className="text-slate-600 font-medium text-xs">{svc.name}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded flex items-center gap-1 ${
+                        isOk ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isOk ? "bg-emerald-500" : "bg-red-500"}`} />
+                        {check === "ok" ? "Operational" : check ? "Error" : svc.fallback}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

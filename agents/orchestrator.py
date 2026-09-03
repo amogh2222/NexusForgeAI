@@ -402,7 +402,12 @@ class NexusOrchestrator:
             agents_chain = " ➔ ".join(state["agent_history"] + ["finalizer"])
             meta_items.append(f"**Agent Pipeline**: `{agents_chain}`")
 
-        final_content = "\n\n---\n\n".join(content_blocks) if content_blocks else "✅ Task completed successfully."
+        if content_blocks:
+            final_content = "\n\n---\n\n".join(content_blocks)
+        elif state.get("error"):
+            final_content = f"⚠️ Pipeline halted with error: {state['error']}"
+        else:
+            final_content = "⚠️ The agent pipeline concluded without generating output content. Please verify that the selected task matches the input context."
         if meta_items:
             final_content += "\n\n> " + " | ".join(meta_items)
 

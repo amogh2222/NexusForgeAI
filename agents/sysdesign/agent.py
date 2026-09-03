@@ -81,7 +81,7 @@ Produce an exhaustive, production-grade System Architecture Document (HLD). Incl
             return {
                 "agent_history": history,
                 "sysdesign_result": content,
-                "messages": state.get("messages", []) + [response]
+                "messages": [response]
             }
         except Exception as e:
             log.error("sysdesign_agent.failed", error=str(e))

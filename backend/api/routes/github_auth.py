@@ -17,14 +17,27 @@ log = structlog.get_logger()
 router = APIRouter(prefix="/auth/github", tags=["auth"])
 
 @router.get("/login")
-async def github_login():
+async def github_login(request: Request):
     """Redirect to GitHub OAuth login."""
     if not settings.GITHUB_CLIENT_ID:
-        raise HTTPException(status_code=500, detail="GitHub OAuth not configured")
+        raise HTTPException(
+            status_code=400,
+            detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env, or use the Quick Demo Sign-in button.",
+        )
+
+    # Resolve client host dynamically
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if ":8000" in host:
+        client_host = host.replace(":8000", ":3000")
+    else:
+        client_host = host
+
+    redirect_uri = f"{scheme}://{client_host}/auth/github/callback"
 
     params = {
         "client_id": settings.GITHUB_CLIENT_ID,
-        "redirect_uri": settings.GITHUB_REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "scope": "repo user",
         "allow_signup": "true",
     }
@@ -118,9 +131,26 @@ async def github_callback(code: str, request: Request):
             # Generate JWT Token
             jwt_token = create_access_token(str(user.id))
 
-            # Redirect back to frontend
-            # In production, use NEXT_PUBLIC_FRONTEND_URL. For now, localhost:3000
-            frontend_url = "http://localhost:3000"
+            # Redirect back to frontend or return JSON
+            host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+            scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+            if ":8000" in host:
+                frontend_host = host.replace(":8000", ":3000")
+            else:
+                frontend_host = host
+
+            frontend_url = f"{scheme}://{frontend_host}"
+
+            # If client called via fetch/JSON, return payload directly
+            accept = request.headers.get("accept", "")
+            if "application/json" in accept and "text/html" not in accept:
+                return {
+                    "access_token": jwt_token,
+                    "token_type": "bearer",
+                    "user_id": str(user.id),
+                    "username": user.username,
+                }
+
             return RedirectResponse(f"{frontend_url}/?token={jwt_token}")
 
 

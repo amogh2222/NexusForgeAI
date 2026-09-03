@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getAuthToken } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-// Remove /api/v1 since WebSocket is mounted at the root /ws
-const WS_BASE = API_URL.replace('http://', 'ws://').replace('https://', 'wss://').replace('/api/v1', '');
-
 export interface WSEvent {
   type: string;
   [key: string]: any;
@@ -23,7 +19,11 @@ export function useWebSocket(projectId: string | null, threadId?: string, onMess
     if (ws.current?.readyState === WebSocket.OPEN) return;
 
     const token = getAuthToken();
-    let url = `${WS_BASE}/ws/${projectId}`;
+    const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = typeof window !== "undefined"
+      ? (window.location.port === "3000" ? `${window.location.hostname}:8000` : window.location.host)
+      : "localhost:8000";
+    let url = `${proto}//${host}/ws/${projectId}`;
     const params = new URLSearchParams();
     if (threadId) params.append('thread_id', threadId);
     if (token) params.append('token', token);

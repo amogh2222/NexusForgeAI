@@ -12,13 +12,25 @@ export default function MemoryPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<{
+    points_count?: number;
+    vectors_count?: number;
+    status?: string;
+  } | null>(null);
 
   useEffect(() => {
     async function init() {
       try {
         const projects = await api.projects.list();
         if (projects && projects.length > 0) {
-          setProjectId(projects[0].id);
+          const pid = projects[0].id;
+          setProjectId(pid);
+          try {
+            const st = await api.memory.getStats(pid);
+            setStats(st);
+          } catch (e) {
+            console.warn("Could not fetch memory stats", e);
+          }
         }
       } catch (err) {
         console.error("Failed to load project:", err);
@@ -55,7 +67,10 @@ export default function MemoryPage() {
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-500">
             <Database size={15} />
-            <span className="hidden xs:inline">Qdrant HNSW:</span> <strong className="text-emerald-700 font-medium">Active</strong>
+            <span className="hidden xs:inline">Qdrant HNSW:</span>{" "}
+            <strong className="text-emerald-700 font-medium">
+              {stats ? `${stats.points_count ?? 0} vectors (${stats.status || "indexed"})` : "Connected"}
+            </strong>
           </div>
         </header>
 

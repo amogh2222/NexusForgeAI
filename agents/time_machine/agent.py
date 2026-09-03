@@ -65,7 +65,7 @@ class TimeMachineAgent(BaseAgent):
             return {
                 "agent_history": history,
                 "time_machine_result": content,
-                "messages": state.get("messages", []) + [response]
+                "messages": [response]
             }
         except Exception as e:
             log.error("time_machine_agent.failed", error=str(e))
