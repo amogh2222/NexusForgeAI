@@ -197,12 +197,34 @@ async def _score_with_rubric(
 
     # Output depth and thoroughness (up to 15 pts)
     out_len = len(output.strip())
-    if out_len > 1500:
+    if out_len > 2500:
         score += 15.0
-    elif out_len > 600:
+    elif out_len > 1200:
         score += 10.0
-    elif out_len > 250:
+    elif out_len > 400:
         score += 5.0
+
+    # Domain-specific technical rigor checks
+    if rubric_name == "ARCHITECTURE_RUBRIC":
+        # Quantitative capacity math & sizing calculations
+        has_math = any(term in out_lower for term in ["qps", "bytes", "gb", "tb", "pareto", "80/20", "capacity", "latency"])
+        if has_math:
+            score += 8.0
+        else:
+            score -= 15.0  # Penalize lack of quantitative capacity planning
+
+        # Production database DDL schema & indexing
+        has_schema = "create table" in out_lower or ("table" in out_lower and "primary key" in out_lower)
+        if has_schema:
+            score += 7.0
+
+        # Advanced distributed systems mechanisms (Base62, Bloom filters, Snowflake, TTL jitter, etc.)
+        has_distributed_mechanisms = any(term in out_lower for term in [
+            "base62", "bloom filter", "snowflake", "consistent hashing",
+            "cache stampede", "avalanche", "ttl jitter", "301", "302", "307", "kafka", "redis cluster"
+        ])
+        if has_distributed_mechanisms:
+            score += 5.0
 
     # Quality alignment with keyword coverage (up to 10 pts)
     score += keyword_recall * 10.0
