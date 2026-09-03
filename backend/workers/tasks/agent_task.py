@@ -111,4 +111,10 @@ def run_agent_pipeline(
             "thread_id": thread_id,
             "error": str(e),
         })
-        raise self.retry(exc=e, countdown=5)
+        from celery.exceptions import SoftTimeLimitExceeded, TimeLimitExceeded
+        if isinstance(e, (SoftTimeLimitExceeded, TimeLimitExceeded)):
+            return {"status": "error", "error": "Agent execution timed out", "thread_id": thread_id}
+
+        if self.request.retries < (self.max_retries or 1):
+            raise self.retry(exc=e, countdown=10)
+        return {"status": "error", "error": str(e), "thread_id": thread_id}

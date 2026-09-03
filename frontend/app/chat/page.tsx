@@ -173,11 +173,11 @@ export default function ChatPage() {
         } catch (e) {
           console.error("Polling error:", e);
         }
-        if (pollCount > 30) {
+        if (pollCount > 20) {
           setIsAgentThinking(false);
           clearInterval(pollInterval);
         }
-      }, 2000);
+      }, 4000);
 
     } catch (err: any) {
       console.error("Failed to send message:", err);
