@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { Send, Bot, User, Settings, Play, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Send, Bot, User, Settings, Play, Loader2, CheckCircle2, AlertCircle, Activity, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, getAuthToken } from "@/lib/api";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -17,6 +17,7 @@ export default function ChatPage() {
   const [agentLogs, setAgentLogs] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
+  const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState(false);
   const threadId = useRef(`thread-${Math.random().toString(36).substring(7)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -195,31 +196,40 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden pb-nav md:pb-0">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0">
-        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 shadow-sm gap-2">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-lg">Agent Workspace</h2>
-            <div className="flex gap-2 items-center">
-              <div className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
+      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0 h-full overflow-hidden">
+        <header className="min-h-[3.5rem] md:min-h-[4rem] py-2 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-4 md:px-6 justify-between z-10 shadow-xs shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h2 className="font-semibold text-base sm:text-lg">Agent Workspace</h2>
+            <div className="flex gap-1.5 sm:gap-2 items-center flex-wrap">
+              <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-emerald-500/15 text-emerald-700 border border-emerald-500/25">
                 Active Project: {projectId ? "Connected" : "Loading..."}
               </div>
               {isConnected ? (
-                <div className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                   WS Connected
                 </div>
               ) : (
-                <div className="px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20">
                   WS Connecting...
                 </div>
               )}
             </div>
           </div>
+
+          <button
+            onClick={() => setIsAgentDrawerOpen(true)}
+            className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors min-h-[36px] touch-manipulation shrink-0"
+          >
+            <Activity size={14} />
+            <span className="hidden xs:inline">Graph</span>
+            <span className="bg-purple-200/80 px-1 rounded text-[10px]">{agentLogs.length}</span>
+          </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
           {messages.length === 0 && (
             <div className="text-center text-slate-400 mt-20">
               <Bot size={48} className="mx-auto mb-4 opacity-50 text-indigo-500" />
@@ -293,23 +303,24 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-6 bg-white border-t border-slate-200">
+        <div className="p-3 sm:p-4 md:p-6 bg-white border-t border-slate-200 shrink-0">
           <div className="max-w-4xl mx-auto relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur opacity-10 group-hover:opacity-20 transition-opacity" />
-            <div className="relative flex items-center bg-slate-50 rounded-xl border border-slate-300 p-2 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
+            <div className="relative flex items-center bg-slate-50 rounded-xl border border-slate-300 p-1.5 sm:p-2 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Ask agents to review code, generate docs, or fix bugs..."
-                className="flex-1 bg-transparent border-none outline-none px-4 text-slate-900 placeholder-slate-400"
+                className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 text-sm sm:text-base text-slate-900 placeholder-slate-400 min-w-0"
                 disabled={isSending}
               />
               <button 
                 onClick={handleSend}
                 disabled={isSending || !input.trim()}
-                className="p-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-50"
+                className="p-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors disabled:opacity-50 min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation shrink-0"
+                aria-label="Send message"
               >
                 {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>
@@ -317,6 +328,63 @@ export default function ChatPage() {
           </div>
         </div>
       </main>
+
+      {/* ─── Mobile Agent Graph Drawer ─── */}
+      <AnimatePresence>
+        {isAgentDrawerOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAgentDrawerOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+            />
+            <motion.aside
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 35 }}
+              className="fixed inset-y-0 right-0 w-4/5 max-w-sm bg-white shadow-2xl flex flex-col z-10 border-l border-slate-200"
+              style={{
+                paddingTop: "max(1rem, env(safe-area-inset-top, 0px))",
+                paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
+              }}
+            >
+              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="font-semibold text-sm text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                  <Activity size={16} className="text-purple-600" />
+                  Live Agent Graph
+                </h3>
+                <button
+                  onClick={() => setIsAgentDrawerOpen(false)}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-4 flex-1 overflow-y-auto space-y-3">
+                {agentLogs.length === 0 ? (
+                  <p className="text-slate-400 text-sm text-center mt-10">No recent agent activity</p>
+                ) : (
+                  agentLogs.map((log) => (
+                    <div key={log.id} className={`bg-slate-50 p-3 rounded-xl border-l-4 border-y border-r border-slate-200 ${log.status === 'error' ? 'border-l-red-500' : 'border-l-purple-600'}`}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-sm font-semibold text-purple-700">{log.agent_name}</span>
+                        <span className={`text-xs flex items-center gap-1 font-medium ${log.status === 'running' ? 'text-blue-600 animate-pulse' : 'text-slate-500'}`}>
+                          {log.status === 'running' && <Play size={10} />} {log.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600">{log.action}</p>
+                      {log.output_summary && <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{log.output_summary}</p>}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
 
       <aside className="hidden lg:flex w-80 border-l border-slate-200 bg-white flex-col z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] shrink-0">
         <div className="p-4 border-b border-slate-200 bg-slate-50/50">

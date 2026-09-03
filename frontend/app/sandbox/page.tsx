@@ -11,6 +11,7 @@ export default function SandboxPage() {
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"editor" | "terminal">("editor");
 
   useEffect(() => {
     async function init() {
@@ -38,6 +39,7 @@ export default function SandboxPage() {
   const handleRun = async () => {
     if (!projectId) return;
     setIsRunning(true);
+    setMobileTab("terminal");
     setOutput("Initializing Sandbox...\nExecuting code...\n");
     
     let seconds = 0;
@@ -88,34 +90,64 @@ export default function SandboxPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden pb-nav md:pb-0">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0">
-        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 shadow-sm gap-2">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-lg">Execution Sandbox</h2>
-            <div className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium">
+      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0 h-full overflow-hidden">
+        <header className="min-h-[3.5rem] md:min-h-[4rem] py-2 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-4 md:px-6 justify-between z-10 shadow-xs shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h2 className="font-semibold text-base sm:text-lg">Execution Sandbox</h2>
+            <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium">
               Python 3.11
             </div>
             {!projectId && (
-              <div className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 border border-red-200 font-medium">
+              <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-red-100 text-red-700 border border-red-200 font-medium">
                 No Active Project
               </div>
             )}
           </div>
-          <button 
-            onClick={handleRun}
-            disabled={isRunning || !projectId}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 font-medium text-sm min-h-[40px]"
-          >
-            {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-            Run Code
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile Tab Segmented Controls */}
+            <div className="md:hidden flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <button
+                onClick={() => setMobileTab("editor")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  mobileTab === "editor"
+                    ? "bg-white text-slate-900 shadow-xs font-semibold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Editor
+              </button>
+              <button
+                onClick={() => setMobileTab("terminal")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1 ${
+                  mobileTab === "terminal"
+                    ? "bg-white text-slate-900 shadow-xs font-semibold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>Output</span>
+                {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+              </button>
+            </div>
+
+            <button 
+              onClick={handleRun}
+              disabled={isRunning || !projectId}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 font-medium text-xs sm:text-sm min-h-[36px] sm:min-h-[40px] touch-manipulation shadow-xs shrink-0"
+            >
+              {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+              <span>Run Code</span>
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Editor */}
-          <div className="flex-1 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-white min-h-0">
+          <div className={`flex-1 h-full border-b md:border-b-0 md:border-r border-slate-200 bg-white min-h-0 ${
+            mobileTab === "editor" ? "flex" : "hidden md:flex"
+          }`}>
             <Editor
               height="100%"
               defaultLanguage="python"
@@ -132,13 +164,23 @@ export default function SandboxPage() {
           </div>
           
           {/* Terminal */}
-          <div className="w-full md:w-1/3 h-1/2 md:h-full bg-slate-900 flex flex-col min-h-0">
-            <div className="p-3 border-b border-slate-700 flex items-center gap-2 text-slate-400 bg-slate-800 shrink-0">
-              <TerminalSquare size={16} />
-              <span className="text-xs font-semibold uppercase tracking-wider">Output</span>
+          <div className={`w-full md:w-1/3 h-full bg-slate-900 flex-col min-h-0 ${
+            mobileTab === "terminal" ? "flex" : "hidden md:flex"
+          }`}>
+            <div className="p-3 border-b border-slate-700 flex items-center justify-between text-slate-400 bg-slate-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <TerminalSquare size={16} />
+                <span className="text-xs font-semibold uppercase tracking-wider">Output</span>
+              </div>
+              <button
+                onClick={() => setOutput("")}
+                className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Clear
+              </button>
             </div>
-            <div className="p-4 flex-1 overflow-y-auto font-mono text-sm text-emerald-400 whitespace-pre-wrap">
-              {output}
+            <div className="p-4 flex-1 overflow-y-auto font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap">
+              {output || <span className="text-slate-500 italic">Click Run Code to execute in isolated sandbox...</span>}
               {isRunning && <span className="animate-pulse">_</span>}
             </div>
           </div>

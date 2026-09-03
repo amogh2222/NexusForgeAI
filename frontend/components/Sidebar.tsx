@@ -137,9 +137,12 @@ export function Sidebar() {
       </aside>
 
       {/* ─── Mobile Top Navigation Bar ─────────────────── */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 w-full shadow-xs">
+      <header
+        className="md:hidden flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 w-full shadow-xs"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0px))" }}
+      >
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center font-bold text-white text-xs shadow-xs">
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center font-bold text-white text-xs shadow-xs">
             N
           </div>
           <span className="font-semibold text-base premium-gradient tracking-tight">NexusForge AI</span>
@@ -147,12 +150,53 @@ export function Sidebar() {
 
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+          className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors touch-manipulation"
           aria-label="Open navigation menu"
         >
           <Menu size={22} />
         </button>
       </header>
+
+      {/* ─── Mobile Bottom Tab Bar (iOS / Android Thumb Bar) ─ */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 px-2 py-1 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.04)]"
+        style={{ paddingBottom: "max(0.35rem, env(safe-area-inset-bottom, 0px))" }}
+      >
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          const shortLabel =
+            item.label === "Execution Sandbox"
+              ? "Sandbox"
+              : item.label === "Memory Explorer"
+              ? "Memory"
+              : item.label === "Agent Chat"
+              ? "Chat"
+              : item.label;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all min-w-[50px] min-h-[48px] touch-manipulation relative ${
+                isActive ? "text-orange-600 font-semibold" : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <item.icon
+                size={20}
+                className={`transition-transform duration-200 ${
+                  isActive ? "scale-110 text-orange-500" : ""
+                }`}
+              />
+              <span className="text-[10px] tracking-tight mt-0.5 whitespace-nowrap">
+                {shortLabel}
+              </span>
+              {isActive && (
+                <div className="absolute -bottom-0.5 w-4 h-0.5 bg-orange-500 rounded-full" />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* ─── Mobile Slide-out Drawer ───────────────────── */}
       <AnimatePresence>
@@ -174,7 +218,11 @@ export function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 350, damping: 35 }}
-              className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-white shadow-2xl flex flex-col pt-6 pb-6 z-10 border-r border-slate-100"
+              className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-white shadow-2xl flex flex-col z-10 border-r border-slate-100"
+              style={{
+                paddingTop: "max(1.5rem, env(safe-area-inset-top, 0px))",
+                paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
+              }}
             >
               {navContent(true)}
             </motion.aside>

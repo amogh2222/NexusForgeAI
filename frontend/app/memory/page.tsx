@@ -46,41 +46,41 @@ export default function MemoryPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative min-w-0 bg-slate-50">
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 sticky top-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-lg">Memory Explorer</h2>
+      <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 pb-nav md:pb-8 relative min-w-0 bg-slate-50">
+        <header className="h-14 sm:h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-4 md:px-6 justify-between z-10 sticky top-0 shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h2 className="font-semibold text-base sm:text-lg">Memory Explorer</h2>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Database size={16} />
-            <span>Qdrant HNSW Indexed: <strong className="text-slate-900">Active</strong></span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-500">
+            <Database size={15} />
+            <span className="hidden xs:inline">Qdrant HNSW:</span> <strong className="text-emerald-700 font-medium">Active</strong>
           </div>
         </header>
 
-        <div className="p-8 max-w-5xl mx-auto w-full">
+        <div className="p-2 sm:p-4 md:p-8 max-w-5xl mx-auto w-full">
           {/* Search Bar */}
-          <div className="relative group mb-8">
+          <div className="relative group mb-6 sm:mb-8">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur opacity-10 transition-opacity" />
-            <div className="relative flex items-center bg-white rounded-xl border border-slate-300 p-2 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <Search className="text-slate-400 ml-2" size={20} />
+            <div className="relative flex items-center bg-white rounded-xl border border-slate-300 p-1.5 sm:p-2 shadow-xs focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
+              <Search className="text-slate-400 ml-2 shrink-0" size={18} />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="Semantic search across repository codebase..."
-                className="flex-1 bg-transparent border-none outline-none px-4 text-slate-900 placeholder-slate-400 h-10 text-lg"
+                className="flex-1 bg-transparent border-none outline-none px-2 sm:px-4 text-slate-900 placeholder-slate-400 h-9 sm:h-10 text-sm sm:text-base min-w-0"
                 disabled={loading}
               />
               <button 
                 onClick={handleSearch}
                 disabled={loading || !query.trim()}
-                className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium transition-colors flex items-center gap-2"
+                className="px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-xs sm:text-sm transition-colors flex items-center gap-1.5 min-h-[36px] touch-manipulation shrink-0"
               >
-                {loading && <Loader2 size={16} className="animate-spin" />}
-                Search
+                {loading && <Loader2 size={15} className="animate-spin" />}
+                <span>Search</span>
               </button>
             </div>
           </div>

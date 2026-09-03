@@ -108,17 +108,17 @@ export default function EvalPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50 overflow-y-auto min-w-0">
-        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 shadow-sm gap-2">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <Beaker className="text-indigo-500" size={20} />
-              Agent Evaluation Suite
+      <main className="flex-1 flex flex-col relative bg-slate-50 overflow-y-auto min-w-0 pb-nav md:pb-8">
+        <header className="min-h-[3.5rem] md:min-h-[4rem] py-2 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 shadow-xs gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+              <Beaker className="text-orange-500" size={18} />
+              <span>Agent Evaluation</span>
             </h2>
             {!projectId && (
-              <div className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 border border-red-200 font-medium">
+              <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-red-100 text-red-700 border border-red-200 font-medium">
                 No Active Project
               </div>
             )}
@@ -126,14 +126,14 @@ export default function EvalPage() {
           <button 
             onClick={() => runBenchmark()}
             disabled={isRunning || !projectId}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 font-medium text-sm shadow-md min-h-[40px]"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors disabled:opacity-50 font-medium text-xs sm:text-sm shadow-xs min-h-[36px] sm:min-h-[40px] touch-manipulation"
           >
-            {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-            Run All Benchmarks
+            {isRunning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+            <span>Run All Benchmarks</span>
           </button>
         </header>
 
-        <div className="p-4 md:p-8 max-w-5xl mx-auto w-full">
+        <div className="p-3 sm:p-4 md:p-8 max-w-5xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div className="lg:col-span-2 glass bg-white/60 p-6 rounded-2xl border border-white/40 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-32 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl -z-10 rounded-full" />

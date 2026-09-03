@@ -131,23 +131,23 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-nav md:pb-8 relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-[120px] pointer-events-none animate-float" />
         <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-sky-200/40 rounded-full blur-[150px] pointer-events-none animate-float" style={{ animationDelay: "2s" }} />
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <header className="mb-12">
-            <h1 className="text-4xl font-bold mb-4 tracking-tight">
+          <header className="mb-6 sm:mb-8 md:mb-12">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 tracking-tight">
               Welcome to <span className="premium-gradient">NexusForge AI</span>
             </h1>
-            <p className="text-slate-500 text-lg max-w-2xl">
+            <p className="text-slate-500 text-sm sm:text-base md:text-lg max-w-2xl">
               Autonomous AI engineering platform. Upload a repository to deploy specialized agents that understand, review, and scale your code.
             </p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
             {/* Quick Actions */}
             <motion.div 
               whileHover={{ y: -5, scale: 1.02 }} 

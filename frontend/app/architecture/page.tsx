@@ -45,21 +45,21 @@ export default function ArchitecturePage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative overflow-y-auto bg-slate-50 min-w-0">
-        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 w-full shadow-sm gap-2">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-lg">System Architecture</h2>
-            <div className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded border border-indigo-200 font-medium">
+      <main className="flex-1 flex flex-col relative overflow-y-auto bg-slate-50 min-w-0 pb-nav md:pb-8">
+        <header className="min-h-[3.5rem] md:min-h-[4rem] py-2 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 w-full shadow-xs gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h2 className="font-semibold text-base sm:text-lg">System Architecture</h2>
+            <div className="text-[11px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-0.5 rounded border border-indigo-200 font-medium">
               AI Generated
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <select 
               value={scale} 
               onChange={(e) => setScale(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all cursor-pointer"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-xs transition-all cursor-pointer min-h-[36px]"
               disabled={loading}
             >
               <option value="1M_users">1M Users</option>
@@ -70,15 +70,15 @@ export default function ArchitecturePage() {
             <button 
               onClick={generateDesign} 
               disabled={loading || !projectId}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors text-white shadow-sm"
+              className="flex items-center gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-white shadow-xs min-h-[36px] touch-manipulation"
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-              Generate Design
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
+              <span>Generate Design</span>
             </button>
           </div>
         </header>
 
-        <div className="flex-1 w-full p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="flex-1 w-full p-3 sm:p-4 md:p-8 max-w-5xl mx-auto">
           {!design && !loading && (
             <div className="text-center mt-20 text-slate-500">
               <Zap size={48} className="mx-auto mb-4 opacity-50 text-indigo-500" />
