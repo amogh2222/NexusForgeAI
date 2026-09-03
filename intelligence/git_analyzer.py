@@ -12,14 +12,12 @@ THIS is a signature feature — no other AI coding tool answers:
 """
 from __future__ import annotations
 
-import hashlib
 import re
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -106,15 +104,21 @@ def _risk_score(lines_added: int, lines_deleted: int, files: int, message: str) 
     churn = lines_added + lines_deleted
     score = 0.0
     # Large commits = higher risk (harder to review)
-    if churn > 500: score += 0.3
-    elif churn > 200: score += 0.15
+    if churn > 500:
+        score += 0.3
+    elif churn > 200:
+        score += 0.15
     # Many files = higher risk
-    if files > 10: score += 0.2
-    elif files > 5: score += 0.1
+    if files > 10:
+        score += 0.2
+    elif files > 5:
+        score += 0.1
     # No commit message = higher risk
-    if len(message.strip()) < 10: score += 0.2
+    if len(message.strip()) < 10:
+        score += 0.2
     # Security-related = higher risk (may introduce security bugs)
-    if _SECURITY_PATTERN.search(message): score += 0.2
+    if _SECURITY_PATTERN.search(message):
+        score += 0.2
     return min(score, 1.0)
 
 
@@ -229,7 +233,6 @@ class GitAnalyzer:
             )
             for commit in commits_with_pattern:
                 files = list(commit.stats.files.keys())
-                total_lines = commit.stats.total["lines"]
                 total_files = commit.stats.total["files"]
 
                 # Get a small diff snippet

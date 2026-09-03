@@ -48,9 +48,9 @@ class AWSPlugin(NexusPlugin):
     async def initialize(self, config: dict) -> bool:
         try:
             import boto3
-            
+
             self._region = config.get("region_name", "us-east-1")
-            
+
             # If keys are not provided, boto3 uses standard credential chain (env vars, ~/.aws/credentials)
             kwargs = {"region_name": self._region}
             if "aws_access_key_id" in config and "aws_secret_access_key" in config:
@@ -58,7 +58,7 @@ class AWSPlugin(NexusPlugin):
                 kwargs["aws_secret_access_key"] = config["aws_secret_access_key"]
                 if "aws_session_token" in config:
                     kwargs["aws_session_token"] = config["aws_session_token"]
-            
+
             self._session = boto3.Session(**kwargs)
             self._ec2 = self._session.client("ec2")
             self._s3 = self._session.client("s3")

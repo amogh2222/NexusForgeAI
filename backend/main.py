@@ -102,7 +102,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                 from backend.core.database import SessionLocal
                 from backend.models import AgentLog
                 import uuid
-                
+
                 async with SessionLocal() as db:
                     log_entry = AgentLog(
                         project_id=uuid.UUID(payload.get("project_id")),

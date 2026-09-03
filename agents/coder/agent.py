@@ -95,7 +95,7 @@ Follow the patterns and conventions shown in the repository context above.
 
             from langchain_core.messages import AIMessage
             files_summary = "\n".join(f"- `{f.path}` ({f.action}): {f.explanation[:80]}" for f in result.files)
-            
+
             code_blocks = []
             for f in result.files:
                 f_lang = f.language or ("python" if f.path.endswith(".py") else "text")

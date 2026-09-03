@@ -11,7 +11,6 @@ import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-from pydantic import BaseModel
 
 from backend.core.config import settings
 
@@ -64,7 +63,7 @@ class BaseAgent(ABC):
         # Fallback to OpenAI-compatible API
         if settings.OPENAI_API_KEY and "gemini" in settings.OPENAI_MODEL.lower():
             from langchain_google_genai import ChatGoogleGenerativeAI
-            
+
             self._llm = ChatGoogleGenerativeAI(
                 model=settings.OPENAI_MODEL,
                 google_api_key=settings.OPENAI_API_KEY,
@@ -161,7 +160,7 @@ Sources:
                 log.warning("llm.quota_exhausted", error=str(e), schema=str(structured_output_schema))
             else:
                 log.error("llm.invocation_failed", error=str(e))
-            
+
             return self._generate_dummy_output(structured_output_schema)
 
     def _generate_dummy_output(self, schema: Any, error_msg: str = "") -> Any:
@@ -169,14 +168,14 @@ Sources:
         diagnostic = f"⚠️ LLM service unreachable ({error_msg or 'check Ollama connection on port 11434'})."
         if schema is None:
             return AIMessage(content=diagnostic)
-        
+
         try:
             fields = schema.model_fields
             dummy_data = {}
             for field_name, field_info in fields.items():
                 default_val = field_info.default
                 is_undefined = type(default_val).__name__ == "PydanticUndefinedType" or default_val == getattr(field_info, "empty", None)
-                
+
                 if default_val is not None and not is_undefined and getattr(field_info, "default_factory", None) is None:
                     dummy_data[field_name] = default_val
                 else:

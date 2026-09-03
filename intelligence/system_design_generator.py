@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator
 
 import structlog
 
@@ -162,7 +162,7 @@ class SystemDesignGenerator:
             raw = self._fallback_design(preset)
 
         sections = self._parse_sections(raw)
-        
+
         # Use LLM generated diagram, strip markdown code block backticks if present
         mermaid = sections.get("MERMAID_DIAGRAM", self._generate_mermaid(context, preset))
         if mermaid.startswith("```mermaid"):
@@ -291,9 +291,6 @@ and exact pricing estimates ($X/month at scale).
 
     def _generate_mermaid(self, context: dict, preset: dict) -> str:
         """Generate a Mermaid architecture diagram from graph context."""
-        endpoints = context.get("api_endpoints", [])
-        has_endpoints = bool(endpoints)
-
         rps = preset.get("rps", 10000)
         cdn = "CloudFront" if rps > 50000 else "CloudFlare"
         db = "Aurora PostgreSQL + Read Replicas" if rps > 10000 else "PostgreSQL"

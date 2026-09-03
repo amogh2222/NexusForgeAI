@@ -46,13 +46,13 @@ class GitHubPlugin(NexusPlugin):
     async def initialize(self, config: dict) -> bool:
         try:
             from github import Github
-            
+
             # Use provided token or fallback to OAuth user token if available in config
             token = config.get("token") or config.get("oauth_token")
             if not token:
                 log.warning("github_plugin.no_token")
                 return False
-                
+
             self._client = Github(token)
             self._org = config.get("org", "")
             self._repo = config.get("repo", "")
@@ -125,7 +125,7 @@ class GitHubPlugin(NexusPlugin):
                     {
                         "number": issue.number,
                         "title": issue.title,
-                        "labels": [l.name for l in issue.labels],
+                        "labels": [lbl.name for lbl in issue.labels],
                         "url": issue.html_url,
                     }
                     for issue in list(issues)[:params.get("limit", 20)]

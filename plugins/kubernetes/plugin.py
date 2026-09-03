@@ -54,7 +54,7 @@ class KubernetesPlugin(NexusPlugin):
             self._core_v1 = client.CoreV1Api()
             self._apps_v1 = client.AppsV1Api()
             self._namespace = config.get("default_namespace", "default")
-            
+
             log.info("kubernetes_plugin.initialized", namespace=self._namespace)
             return True
         except ImportError:

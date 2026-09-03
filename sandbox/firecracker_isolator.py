@@ -11,7 +11,6 @@ import platform
 import subprocess
 import time
 import uuid
-from typing import Optional
 
 import structlog
 
@@ -23,7 +22,7 @@ class FirecrackerIsolator(SandboxIsolator):
     """
     Runs code inside a Firecracker microVM for maximum isolation.
     """
-    
+
     def __init__(self) -> None:
         super().__init__()
         self._firecracker_available = self._check_firecracker()
@@ -48,7 +47,7 @@ class FirecrackerIsolator(SandboxIsolator):
     async def _execute_firecracker(self, code: str, language: str, timeout: int) -> SandboxResult:
         start = time.perf_counter()
         socket_path = f"/tmp/firecracker_{uuid.uuid4().hex[:8]}.socket"
-        
+
         try:
             # 1. Start Firecracker process
             fc_proc = await asyncio.create_subprocess_exec(
@@ -56,7 +55,7 @@ class FirecrackerIsolator(SandboxIsolator):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            
+
             # Wait for socket
             for _ in range(50):
                 if os.path.exists(socket_path):
@@ -76,7 +75,7 @@ class FirecrackerIsolator(SandboxIsolator):
                         "boot_args": f"console=ttyS0 reboot=k panic=1 pci=off init=/bin/sh -c '{self._build_execution_script(code, language)} > /dev/ttyS0 2>&1; poweroff -f'"
                     }
                 )
-                
+
                 # Set root drive
                 await client.put(
                     "http://localhost/drives/rootfs",
@@ -87,7 +86,7 @@ class FirecrackerIsolator(SandboxIsolator):
                         "is_read_only": True
                     }
                 )
-                
+
                 # Start VM
                 await client.put(
                     "http://localhost/actions",

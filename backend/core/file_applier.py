@@ -12,7 +12,7 @@ log = structlog.get_logger()
 
 class FileApplier:
     """
-    Applies GeneratedCode FileChanges directly to the physical filesystem 
+    Applies GeneratedCode FileChanges directly to the physical filesystem
     where the repository was cloned.
     """
     def __init__(self, db: AsyncSession):
@@ -31,13 +31,13 @@ class FileApplier:
             repo_uuid = uuid.UUID(repository_id)
             result = await self.db.execute(select(Repository).where(Repository.id == repo_uuid))
             repo = result.scalars().first()
-            
+
             if not repo or not repo.local_path:
                 log.error("file_applier.repo_not_found_or_no_path", repository_id=repository_id)
                 return False
 
             base_path = repo.local_path
-            
+
             if not os.path.exists(base_path):
                 log.error("file_applier.path_does_not_exist", path=base_path)
                 return False
@@ -47,9 +47,9 @@ class FileApplier:
                 relative_path = file_change.get("path", "").lstrip("/")
                 if not relative_path:
                     continue
-                    
+
                 abs_path = os.path.join(base_path, relative_path)
-                
+
                 # Prevent directory traversal attacks
                 if not os.path.abspath(abs_path).startswith(os.path.abspath(base_path)):
                     log.warning("file_applier.path_traversal_attempt", path=relative_path)
@@ -64,7 +64,7 @@ class FileApplier:
                         f.write(content)
                     applied_count += 1
                     log.info("file_applier.wrote_file", path=relative_path)
-                    
+
                 elif action == "delete":
                     if os.path.exists(abs_path):
                         os.remove(abs_path)

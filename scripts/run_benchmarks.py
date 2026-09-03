@@ -38,9 +38,9 @@ async def real_agent_fn(prompt: str) -> str:
 
 def generate_markdown_report(report: EvaluationReport, output_file: str):
     """Generate a GitHub-flavored Markdown report."""
-    
+
     lines = [
-        f"# NexusForge AI — Agent Benchmark Report",
+        "# NexusForge AI — Agent Benchmark Report",
         f"**Run ID:** `{report.suite_id}`",
         f"**Date:** {report.generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}",
         "",
@@ -55,14 +55,14 @@ def generate_markdown_report(report: EvaluationReport, output_file: str):
         "| ID | Name | Passed | Score | Latency | Error |",
         "|---|---|:---:|---:|---:|---|",
     ]
-    
+
     for run in report.runs:
         passed_icon = "✅" if run.passed else "❌"
         error = run.error if run.error else "-"
         score = f"{run.overall_score:.1f}"
         latency = f"{run.latency_ms / 1000:.2f}s"
         lines.append(f"| `{run.case_id}` | {run.case_name} | {passed_icon} | {score} | {latency} | {error} |")
-        
+
     lines.append("")
     lines.append("## Failure Analysis")
     failures = [r for r in report.runs if not r.passed]
@@ -71,13 +71,13 @@ def generate_markdown_report(report: EvaluationReport, output_file: str):
             lines.append(f"### {f.case_name} (`{f.case_id}`)")
             lines.append(f"- **Keyword Recall:** {f.keyword_recall * 100:.1f}%")
             lines.append(f"- **Rubric Score:** {f.rubric_score:.1f}")
-            lines.append(f"#### Agent Output Snippet:")
+            lines.append("#### Agent Output Snippet:")
             lines.append("```text")
             lines.append(f.agent_output[:500] + ("..." if len(f.agent_output) > 500 else ""))
             lines.append("```")
     else:
         lines.append("No failures! 🎉")
-        
+
     with open(output_file, "w") as f:
         f.write("\n".join(lines))
     log.info("benchmark.report_generated", path=output_file)
@@ -88,20 +88,20 @@ async def main():
     parser.add_argument("--output", default="benchmark_report.md", help="Output markdown file")
     parser.add_argument("--cases", nargs="+", help="Specific case IDs to run")
     args = parser.parse_args()
-    
+
     suite = BenchmarkSuite()
     suite_id = f"run-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    
+
     log.info("benchmark.start", suite_id=suite_id, cases=args.cases)
-    
+
     report = await suite.run(
         suite_id=suite_id,
         agent_fn=real_agent_fn,
         case_ids=args.cases
     )
-    
+
     generate_markdown_report(report, args.output)
-    
+
     if report.pass_rate < 1.0:
         sys.exit(1)
 

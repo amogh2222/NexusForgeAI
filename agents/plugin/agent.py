@@ -1,11 +1,10 @@
 """NexusForge AI — Plugin Agent"""
 import time
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 
 from agents.base_agent import BaseAgent
-from backend.core.config import settings
 
 log = structlog.get_logger()
 
@@ -41,13 +40,13 @@ Once you have the information, summarize it clearly for the user.
             return {"messages": [HumanMessage(content=summary)]}
 
         llm = self._get_llm()
-        
+
         # create_react_agent manages the tool calling loop
         agent_executor = create_react_agent(llm, tools, prompt=self.SYSTEM_PROMPT)
-        
+
         # We don't want to pass ALL messages to the tool agent, just the task, to save context
         messages = [HumanMessage(content=task)]
-        
+
         try:
             result = await agent_executor.ainvoke({"messages": messages})
             final_message = result["messages"][-1].content

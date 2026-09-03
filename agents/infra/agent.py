@@ -79,7 +79,7 @@ Include Dockerfile, docker-compose.yml, and GitHub Actions CI/CD at minimum.
 
             from langchain_core.messages import AIMessage
             components = [k for k, v in bundle.model_dump().items() if v and k not in ["notes", "setup_instructions"]]
-            
+
             infra_sections = []
             if bundle.dockerfile:
                 infra_sections.append(f"### Dockerfile\n```dockerfile\n{bundle.dockerfile}\n```")

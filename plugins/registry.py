@@ -36,22 +36,22 @@ class PluginRegistry:
         configs is a dictionary mapping plugin_name -> config_dict.
         """
         plugins_dir = os.path.dirname(__file__)
-        
+
         # Iterate over all modules in the plugins package
         for _, module_name, is_pkg in pkgutil.iter_modules([plugins_dir]):
             if is_pkg and module_name not in ("__pycache__",):
                 try:
                     module = importlib.import_module(f"plugins.{module_name}.plugin")
-                    
+
                     # Find all classes that subclass NexusPlugin
                     for name, obj in inspect.getmembers(module, inspect.isclass):
                         if issubclass(obj, NexusPlugin) and obj is not NexusPlugin:
                             plugin_instance = obj()
                             meta = plugin_instance.metadata
-                            
+
                             # Only initialize if we have config for it
                             plugin_config = configs.get(meta.name, {})
-                            
+
                             success = await plugin_instance.initialize(plugin_config)
                             if success:
                                 self._plugins[meta.name] = plugin_instance
@@ -85,15 +85,15 @@ class PluginRegistry:
         for name, plugin in self._plugins.items():
             meta = plugin.metadata
             actions_list = plugin.ACTIONS if hasattr(plugin, "ACTIONS") else []
-            
+
             description = (
                 f"Interact with {meta.name}. "
                 f"Description: {meta.description}. "
                 f"Available actions: {', '.join(actions_list)}. "
                 "Pass the action name and a JSON string of parameters."
             )
-            
-            # Create a synchronous wrapper for Langchain if async isn't supported, 
+
+            # Create a synchronous wrapper for Langchain if async isn't supported,
             # but LangGraph supports async tools natively via coroutine.
             async def _run_plugin(action: str, params: str = "{}", _plugin=plugin) -> str:
                 try:
