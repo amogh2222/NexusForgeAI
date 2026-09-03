@@ -108,10 +108,10 @@ export default function EvalPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50 overflow-y-auto">
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 sticky top-0 shadow-sm">
+      <main className="flex-1 flex flex-col relative bg-slate-50 overflow-y-auto min-w-0">
+        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 shadow-sm gap-2">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg flex items-center gap-2">
               <Beaker className="text-indigo-500" size={20} />
@@ -126,14 +126,14 @@ export default function EvalPage() {
           <button 
             onClick={() => runBenchmark()}
             disabled={isRunning || !projectId}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 font-medium text-sm shadow-md"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 font-medium text-sm shadow-md min-h-[40px]"
           >
             {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
             Run All Benchmarks
           </button>
         </header>
 
-        <div className="p-8 max-w-5xl mx-auto w-full">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div className="lg:col-span-2 glass bg-white/60 p-6 rounded-2xl border border-white/40 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-32 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl -z-10 rounded-full" />

@@ -1,0 +1,41 @@
+replicaCount: 1
+
+backend:
+  image:
+    repository: nexusforge/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8000
+  env:
+    APP_NAME: "NexusForge AI"
+    APP_ENV: "production"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+frontend:
+  image:
+    repository: nexusforge/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: nexusforge.local
+      paths:
+        - path: /
+          pathType: Prefix

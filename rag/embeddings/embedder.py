@@ -27,6 +27,15 @@ class EmbeddingService:
         self.model_name = model_name
         self.max_seq_length = max_seq_length
         self.model = None
+        self.redis_client = None
+
+        try:
+            import os
+            import redis
+            redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+            self.redis_client = redis.from_url(redis_url)
+        except Exception:
+            self.redis_client = None
 
         if model_name == "mock":
             log.warning("embeddings.mocked", msg="Mock embeddings requested via config")
@@ -84,12 +93,33 @@ class EmbeddingService:
             return [0.1] * 768
 
         prefixed_query = f"{self.QUERY_PREFIX}{query}"
+        cache_key = None
+        if self.redis_client:
+            import hashlib
+            import json
+            cache_key = f"embed:{hashlib.sha256(prefixed_query.encode()).hexdigest()}"
+            try:
+                cached = self.redis_client.get(cache_key)
+                if cached:
+                    return json.loads(cached)
+            except Exception:
+                pass
+
         embedding = self.model.encode(
             [prefixed_query],
             normalize_embeddings=True,   # REQUIRED
             convert_to_numpy=True,
         )
-        return embedding[0].tolist()
+        res = embedding[0].tolist()
+
+        if cache_key and self.redis_client:
+            try:
+                import json
+                self.redis_client.set(cache_key, json.dumps(res), ex=86400)
+            except Exception:
+                pass
+
+        return res
 
     def embed_queries(self, queries: list[str]) -> list[list[float]]:
         """Embed multiple queries with the required prefix."""

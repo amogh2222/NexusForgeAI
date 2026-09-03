@@ -131,9 +131,9 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8 relative">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-[120px] pointer-events-none animate-float" />
         <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-sky-200/40 rounded-full blur-[150px] pointer-events-none animate-float" style={{ animationDelay: "2s" }} />
 

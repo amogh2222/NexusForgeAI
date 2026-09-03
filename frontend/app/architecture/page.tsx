@@ -44,10 +44,10 @@ export default function ArchitecturePage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative overflow-y-auto bg-slate-50">
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 sticky top-0 w-full shadow-sm">
+      <main className="flex-1 flex flex-col relative overflow-y-auto bg-slate-50 min-w-0">
+        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 sticky top-0 w-full shadow-sm gap-2">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg">System Architecture</h2>
             <div className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded border border-indigo-200 font-medium">
@@ -77,7 +77,7 @@ export default function ArchitecturePage() {
           </div>
         </header>
 
-        <div className="flex-1 w-full p-8 max-w-5xl mx-auto">
+        <div className="flex-1 w-full p-4 md:p-8 max-w-5xl mx-auto">
           {!design && !loading && (
             <div className="text-center mt-20 text-slate-500">
               <Zap size={48} className="mx-auto mb-4 opacity-50 text-indigo-500" />

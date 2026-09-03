@@ -166,7 +166,7 @@ def create_app() -> FastAPI:
     Instrumentator(
         should_group_status_codes=False,
         should_ignore_untemplated=True,
-        should_respect_env_var=True,
+        should_respect_env_var=False,
         should_instrument_requests_inprogress=True,
         excluded_handlers=["/health", "/metrics"],
     ).instrument(app).expose(app, endpoint="/metrics")
@@ -190,6 +190,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router,       prefix="/api/v1/agents",       tags=["agents"])
     app.include_router(memory_router,       prefix="/api/v1/memory",       tags=["memory"])
     app.include_router(executions_router,   prefix="/api/v1/executions",   tags=["executions"])
+    app.include_router(executions_router,   prefix="/api/v1/execute",      tags=["executions"])
 
     # ─── WebSocket ───────────────────────────────────────────────────────────
     try:

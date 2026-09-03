@@ -195,10 +195,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50">
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 shadow-sm">
+      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0">
+        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 shadow-sm gap-2">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg">Agent Workspace</h2>
             <div className="flex gap-2 items-center">
@@ -318,7 +318,7 @@ export default function ChatPage() {
         </div>
       </main>
 
-      <aside className="w-80 border-l border-slate-200 bg-white flex flex-col z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside className="hidden lg:flex w-80 border-l border-slate-200 bg-white flex-col z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] shrink-0">
         <div className="p-4 border-b border-slate-200 bg-slate-50/50">
           <h3 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">Live Agent Graph</h3>
         </div>

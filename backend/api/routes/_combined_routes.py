@@ -152,6 +152,7 @@ class ExecutionRequest(BaseModel):
     stdin: Optional[str] = None
 
 
+@executions_router.post("")
 @executions_router.post("/")
 async def create_execution(
     request: ExecutionRequest,

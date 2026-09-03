@@ -152,6 +152,26 @@ async def get_repository(
     return repo
 
 
+@router.get("/{repo_id}/status")
+async def get_repository_status(
+    repo_id: str,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Get repository indexing status and progress."""
+    repo_service = RepositoryService(db)
+    repo = await repo_service.get_by_id(uuid.UUID(repo_id), current_user.id)
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return {
+        "status": repo.indexed_status,
+        "progress": repo.indexing_progress,
+        "total_files": repo.total_files,
+        "indexed_files": repo.indexed_files,
+        "total_chunks": repo.total_chunks,
+    }
+
+
 @router.get("/{repo_id}/tree")
 async def get_file_tree(
     repo_id: str,

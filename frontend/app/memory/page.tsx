@@ -46,9 +46,9 @@ export default function MemoryPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative overflow-y-auto bg-slate-50">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative min-w-0 bg-slate-50">
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 sticky top-0 shadow-sm">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg">Memory Explorer</h2>

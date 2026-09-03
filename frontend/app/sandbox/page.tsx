@@ -88,10 +88,10 @@ export default function SandboxPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col relative bg-slate-50">
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-6 justify-between z-10 shadow-sm">
+      <main className="flex-1 flex flex-col relative bg-slate-50 min-w-0">
+        <header className="min-h-[4rem] py-2.5 border-b border-slate-200 bg-white/80 backdrop-blur flex flex-wrap items-center px-4 md:px-6 justify-between z-10 shadow-sm gap-2">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-lg">Execution Sandbox</h2>
             <div className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium">
@@ -106,16 +106,16 @@ export default function SandboxPage() {
           <button 
             onClick={handleRun}
             disabled={isRunning || !projectId}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 font-medium text-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 font-medium text-sm min-h-[40px]"
           >
             {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
             Run Code
           </button>
         </header>
 
-        <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Editor */}
-          <div className="flex-1 border-r border-slate-200 bg-white">
+          <div className="flex-1 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-white min-h-0">
             <Editor
               height="100%"
               defaultLanguage="python"
@@ -132,8 +132,8 @@ export default function SandboxPage() {
           </div>
           
           {/* Terminal */}
-          <div className="w-1/3 bg-slate-900 flex flex-col">
-            <div className="p-3 border-b border-slate-700 flex items-center gap-2 text-slate-400 bg-slate-800">
+          <div className="w-full md:w-1/3 h-1/2 md:h-full bg-slate-900 flex flex-col min-h-0">
+            <div className="p-3 border-b border-slate-700 flex items-center gap-2 text-slate-400 bg-slate-800 shrink-0">
               <TerminalSquare size={16} />
               <span className="text-xs font-semibold uppercase tracking-wider">Output</span>
             </div>
