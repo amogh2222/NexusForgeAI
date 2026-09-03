@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
+import { ArchitectureTopology } from "@/components/ArchitectureTopology";
 import { Loader2, Zap } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -121,26 +122,8 @@ export default function ArchitecturePage() {
                 </div>
 
                 {/* Visual Flowchart / Diagram Section */}
-                <div className="mb-8 p-6 bg-slate-900 rounded-2xl text-slate-100 shadow-inner">
-                  <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-                    <h3 className="text-lg font-semibold flex items-center gap-2 text-indigo-400">
-                      <Zap size={18} /> Architecture Flowchart
-                    </h3>
-                    <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">System Topology</span>
-                  </div>
-                  {design.mermaid_diagram ? (
-                    <div className="p-4 bg-white rounded-xl overflow-x-auto border border-slate-200 shadow-sm flex justify-center min-h-[300px] items-center">
-                      <img 
-                        src={`https://mermaid.ink/svg/${btoa(unescape(encodeURIComponent(design.mermaid_diagram)))}`} 
-                        alt="System Architecture Flowchart" 
-                        className="max-w-full h-auto rounded"
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-slate-400 text-sm">
-                      Topology mapped: Client → CDN/Load Balancer → API Gateway ({design.load_balancing}) → Microservices → Cache ({design.cache_layer}) & DB ({design.database_strategy})
-                    </div>
-                  )}
+                <div className="mb-8">
+                  <ArchitectureTopology scale={scale} design={design} />
                 </div>
 
                 <div className="space-y-8">

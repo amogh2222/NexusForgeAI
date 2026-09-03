@@ -164,7 +164,7 @@ class SystemDesignGenerator:
         sections = self._parse_sections(raw)
 
         # Use LLM generated diagram, strip markdown code block backticks if present
-        mermaid = sections.get("MERMAID_DIAGRAM", self._generate_mermaid(context, preset))
+        mermaid = sections.get("MERMAID_DIAGRAM", "").strip()
         if mermaid.startswith("```mermaid"):
             mermaid = mermaid[10:]
         if mermaid.startswith("```"):
@@ -172,8 +172,11 @@ class SystemDesignGenerator:
         if mermaid.endswith("```"):
             mermaid = mermaid[:-3]
         mermaid = mermaid.strip()
-        mermaid = mermaid.strip()
-        if not any(mermaid.startswith(kw) for kw in ["graph", "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram"]):
+
+        # Validate that the diagram has actual graph connections
+        if not mermaid or "-->" not in mermaid or len(mermaid) < 30:
+            mermaid = self._generate_mermaid(context, preset)
+        elif not any(mermaid.startswith(kw) for kw in ["graph", "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram"]):
             mermaid = "graph TB\n" + mermaid
 
         return SystemDesignDoc(
@@ -293,36 +296,42 @@ and exact pricing estimates ($X/month at scale).
         """Generate a Mermaid architecture diagram from graph context."""
         rps = preset.get("rps", 10000)
         cdn = "CloudFront" if rps > 50000 else "CloudFlare"
-        db = "Aurora PostgreSQL + Read Replicas" if rps > 10000 else "PostgreSQL"
-        cache = "Redis Cluster (6 nodes)" if rps > 50000 else "Redis Sentinel"
+        db = "Aurora PostgreSQL" if rps > 10000 else "PostgreSQL"
+        cache = "Redis Cluster" if rps > 50000 else "Redis Sentinel"
 
-        diagram = f"""```mermaid
-graph TB
-    Client["👤 Users ({preset['users']})"]
-    CDN["{cdn} CDN"]
-    LB["Load Balancer\\nNGINX / AWS ALB"]
-    API1["API Pod 1\\nFastAPI"]
-    API2["API Pod 2\\nFastAPI"]
-    API3["API Pod N\\nFastAPI (HPA)"]
-    Cache["{cache}\\nSession + Query Cache"]
-    DB["{db}\\nPrimary + Replicas"]
-    Queue["Message Queue\\nRedis Streams / Kafka"]
-    Workers["Celery Workers\\nAI Agent Pool (HPA)"]
-    Storage["Object Storage\\nS3 / R2"]
-    Monitor["Observability\\nGrafana + Prometheus"]
+        diagram = f"""graph TB
+    Client["Client Traffic ({preset['users']})"]
+    CDN["{cdn} Edge CDN"]
+    LB["Load Balancer [AWS ALB / NGINX]"]
+    API1["FastAPI Service Pod 1"]
+    API2["FastAPI Service Pod 2"]
+    API3["FastAPI Service Pod N [HPA]"]
+    Cache["{cache} [Query & Session]"]
+    DB["{db} [Multi-AZ Primary + Replicas]"]
+    Queue["Message Broker [Kafka / Redis Streams]"]
+    Workers["Celery AI Worker Swarm"]
+    Storage["Object Storage [S3 / Cloudflare R2]"]
+    Monitor["Observability [Prometheus & Grafana]"]
 
     Client --> CDN
     CDN --> LB
-    LB --> API1 & API2 & API3
-    API1 & API2 & API3 --> Cache
-    API1 & API2 & API3 --> DB
-    API1 & API2 & API3 --> Queue
+    LB --> API1
+    LB --> API2
+    LB --> API3
+    API1 --> Cache
+    API2 --> Cache
+    API3 --> Cache
+    API1 --> DB
+    API2 --> DB
+    API3 --> DB
+    API1 --> Queue
+    API2 --> Queue
+    API3 --> Queue
     Queue --> Workers
     Workers --> DB
     Workers --> Storage
-    DB --> Monitor
     API1 --> Monitor
-```"""
+    DB --> Monitor"""
         return diagram
 
     def _fallback_design(self, preset: dict) -> str:
