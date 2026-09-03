@@ -116,6 +116,8 @@ services:
       - ./evaluation:/app/evaluation
       - ./plugins:/app/plugins
       - ./intelligence:/app/intelligence
+      - ./tests:/app/tests
+      - hf_cache:/app/.cache
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock  # For sandbox execution
     ports:
@@ -134,6 +136,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 120s
 
   # ──────────────────────────────────────────
   # Celery Worker — Async task processing
@@ -163,6 +166,8 @@ services:
       - ./evaluation:/app/evaluation
       - ./plugins:/app/plugins
       - ./intelligence:/app/intelligence
+      - ./tests:/app/tests
+      - hf_cache:/app/.cache
       - repo_uploads:/app/data/uploads
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -291,6 +296,7 @@ volumes:
   neo4j_plugins:
   repo_uploads:
   vllm_cache:
+  hf_cache:
 
 networks:
   default:

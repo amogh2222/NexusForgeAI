@@ -29,16 +29,11 @@ class SparseEmbeddingService:
 
     def __init__(self) -> None:
         start = time.perf_counter()
-        from backend.core.config import settings
-        if settings.EMBEDDING_MODEL == "mock":
-            log.warning("sparse_embedder.mocked", msg="Mock embeddings requested via config")
-            self._model = None
-            return
 
         try:
             from fastembed import SparseTextEmbedding
 
-            self._model = SparseTextEmbedding(model_name=self.MODEL_NAME)
+            self._model = SparseTextEmbedding(model_name=self.MODEL_NAME, cache_dir="/app/.cache/fastembed")
             elapsed = (time.perf_counter() - start) * 1000
             log.info(
                 "sparse_embedder.loaded",

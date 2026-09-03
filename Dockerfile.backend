@@ -57,8 +57,8 @@ COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 # Create required directories
-RUN mkdir -p /app/data/uploads /app/data/chroma && \
-    chown -R nexus:nexus /app
+RUN mkdir -p /app/data/uploads /app/data/chroma /app/.cache /tmp/fastembed_cache && \
+    chown -R nexus:nexus /app /tmp/fastembed_cache
 
 USER nexus
 

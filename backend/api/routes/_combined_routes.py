@@ -8,7 +8,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from backend.core.dependencies import CurrentUser, DBSession
-from fastapi import APIRouter as _APIRouter
+from fastapi import APIRouter as _APIRouter, HTTPException
 
 chat_router = _APIRouter()
 agents_router = _APIRouter()
@@ -131,7 +131,7 @@ async def retrieve_memory(
             "sources": [h.get("file_path", "") for h in hits if h.get("file_path")],
         }
     except Exception as e:
-        return {"query": query, "context": [], "sources": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Memory retrieval failed: {e}")
 
 
 @memory_router.get("/stats")
@@ -139,9 +139,17 @@ async def memory_stats(project_id: str, current_user: CurrentUser):
     """Get Qdrant collection stats for a project."""
     try:
         from rag.vector_store.qdrant_store import QdrantStore
-        return QdrantStore.get_instance().get_collection_stats(project_id)
-    except Exception:
-        return {"status": "active", "points_count": 0}
+        stats = QdrantStore.get_instance().get_collection_stats(project_id)
+        if "error" in stats:
+            return {
+                "project_id": project_id,
+                "status": "not_indexed",
+                "points_count": 0,
+                "vectors_count": 0,
+            }
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch memory stats: {e}")
 
 
 # ─── Executions ────────────────────────────────────────────────────

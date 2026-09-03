@@ -151,51 +151,12 @@ Sources:
         return resp
 
     async def _invoke_llm(self, messages: list, structured_output_schema=None) -> Any:
-        """Wrapper to invoke LLM and handle permanent failures gracefully by returning dummy data."""
+        """Wrapper to invoke LLM with structured or unstructured output, propagating real errors."""
         try:
             return await self._do_invoke_llm(messages, structured_output_schema)
         except Exception as e:
-            err_msg = str(e).lower()
-            if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg or "prepayment" in err_msg:
-                log.warning("llm.quota_exhausted", error=str(e), schema=str(structured_output_schema))
-            else:
-                log.error("llm.invocation_failed", error=str(e))
-
-            return self._generate_dummy_output(structured_output_schema)
-
-    def _generate_dummy_output(self, schema: Any, error_msg: str = "") -> Any:
-        """Generate a safe diagnostic fallback object when the LLM service is temporarily unreachable."""
-        diagnostic = f"⚠️ LLM service unreachable ({error_msg or 'check Ollama connection on port 11434'})."
-        if schema is None:
-            return AIMessage(content=diagnostic)
-
-        try:
-            fields = schema.model_fields
-            dummy_data = {}
-            for field_name, field_info in fields.items():
-                default_val = field_info.default
-                is_undefined = type(default_val).__name__ == "PydanticUndefinedType" or default_val == getattr(field_info, "empty", None)
-
-                if default_val is not None and not is_undefined and getattr(field_info, "default_factory", None) is None:
-                    dummy_data[field_name] = default_val
-                else:
-                    annotation_str = str(field_info.annotation).lower()
-                    if "list" in annotation_str:
-                        dummy_data[field_name] = []
-                    elif "dict" in annotation_str:
-                        dummy_data[field_name] = {}
-                    elif "str" in annotation_str:
-                        dummy_data[field_name] = diagnostic
-                    elif "int" in annotation_str or "float" in annotation_str:
-                        dummy_data[field_name] = 0
-                    elif "bool" in annotation_str:
-                        dummy_data[field_name] = False
-                    else:
-                        dummy_data[field_name] = None
-            return schema.model_construct(**dummy_data)
-        except Exception as e:
-            log.error("llm.dummy_generation_failed", error=str(e))
-            return schema.model_construct() if hasattr(schema, "model_construct") else schema()
+            log.error("llm.invocation_failed", agent=self.name, error=str(e))
+            raise RuntimeError(f"LLM invocation failed for agent '{self.name}': {e}") from e
 
     def _emit_agent_start(self, state: dict, action: str) -> dict:
         """Return agent start event payload for WebSocket broadcast."""

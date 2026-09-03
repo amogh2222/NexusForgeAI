@@ -37,19 +37,24 @@ class EmbeddingService:
         except Exception:
             self.redis_client = None
 
-        if model_name == "mock":
-            log.warning("embeddings.mocked", msg="Mock embeddings requested via config")
-            self.model = None
-            return
-
+        self._is_fastembed = False
         try:
-            from sentence_transformers import SentenceTransformer
-            log.info("embeddings.loading", model=model_name)
-            self.model = SentenceTransformer(model_name)
-            self.model.max_seq_length = max_seq_length
-            log.info("embeddings.loaded", model=model_name, dim=self.model.get_sentence_embedding_dimension())
-        except ImportError:
-            log.warning("embeddings.mocked", msg="ML dependencies not installed, using mock embeddings")
+            from fastembed import TextEmbedding
+            log.info("embeddings.loading_fastembed", model=model_name)
+            self.model = TextEmbedding(model_name=model_name, cache_dir="/app/.cache/fastembed")
+            self._is_fastembed = True
+            log.info("embeddings.loaded_fastembed", model=model_name, dim=768)
+        except Exception as fe:
+            log.info("embeddings.trying_sentence_transformers", error=str(fe))
+            try:
+                from sentence_transformers import SentenceTransformer
+                log.info("embeddings.loading_st", model=model_name)
+                self.model = SentenceTransformer(model_name)
+                self.model.max_seq_length = max_seq_length
+                log.info("embeddings.loaded_st", model=model_name)
+            except Exception as se:
+                log.error("embeddings.load_failed", model=model_name, error=str(se))
+                raise RuntimeError(f"Failed to load embedding model '{model_name}': {se}") from se
 
     @classmethod
     def get_instance(cls) -> "EmbeddingService":
@@ -71,18 +76,20 @@ class EmbeddingService:
             return []
 
         if self.model is None:
-            # Mock embeddings for fast testing
-            return [[0.1] * 768 for _ in texts]
+            raise RuntimeError("Embedding model is not loaded. Cannot embed documents.")
 
         log.info("embeddings.embed_documents", count=len(texts), batch_size=batch_size)
-        embeddings = self.model.encode(
-            texts,
-            normalize_embeddings=True,   # REQUIRED for cosine similarity with BGE
-            batch_size=batch_size,
-            show_progress_bar=len(texts) > 100,
-            convert_to_numpy=True,
-        )
-        return embeddings.tolist()
+        if self._is_fastembed:
+            return [e.tolist() for e in self.model.embed(texts, batch_size=batch_size)]
+        else:
+            embeddings = self.model.encode(
+                texts,
+                normalize_embeddings=True,   # REQUIRED for cosine similarity with BGE
+                batch_size=batch_size,
+                show_progress_bar=len(texts) > 100,
+                convert_to_numpy=True,
+            )
+            return embeddings.tolist()
 
     def embed_query(self, query: str) -> list[float]:
         """
@@ -90,7 +97,7 @@ class EmbeddingService:
         BGE REQUIRES the query prefix for proper retrieval behavior.
         """
         if self.model is None:
-            return [0.1] * 768
+            raise RuntimeError("Embedding model is not loaded. Cannot embed query.")
 
         prefixed_query = f"{self.QUERY_PREFIX}{query}"
         cache_key = None
@@ -105,12 +112,15 @@ class EmbeddingService:
             except Exception:
                 pass
 
-        embedding = self.model.encode(
-            [prefixed_query],
-            normalize_embeddings=True,   # REQUIRED
-            convert_to_numpy=True,
-        )
-        res = embedding[0].tolist()
+        if self._is_fastembed:
+            res = list(self.model.embed([prefixed_query]))[0].tolist()
+        else:
+            embedding = self.model.encode(
+                [prefixed_query],
+                normalize_embeddings=True,   # REQUIRED
+                convert_to_numpy=True,
+            )
+            res = embedding[0].tolist()
 
         if cache_key and self.redis_client:
             try:

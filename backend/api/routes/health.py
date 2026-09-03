@@ -39,11 +39,21 @@ async def detailed_health():
         checks["redis"] = f"error: {str(e)}"
 
     try:
-        from rag.vector_store.chroma_store import ChromaStore
-        ChromaStore.get_instance().client.heartbeat()
-        checks["chromadb"] = "ok"
+        from rag.vector_store.qdrant_store import QdrantStore
+        QdrantStore.get_instance().client.get_collections()
+        checks["qdrant"] = "ok"
     except Exception as e:
-        checks["chromadb"] = f"error: {str(e)}"
+        checks["qdrant"] = f"error: {str(e)}"
+
+    try:
+        from graph.neo4j_client import Neo4jClient
+        neo = Neo4jClient.get_instance()
+        if await neo.verify_connectivity():
+            checks["neo4j"] = "ok"
+        else:
+            checks["neo4j"] = "offline"
+    except Exception as e:
+        checks["neo4j"] = f"error: {str(e)}"
 
     overall = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
     return {"status": overall, "checks": checks}

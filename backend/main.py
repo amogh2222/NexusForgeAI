@@ -39,20 +39,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Pre-load embedding model (critical — must not load per-task in Celery)
-    from rag.embeddings.embedder import EmbeddingService
-    EmbeddingService.get_instance()
-    log.info("nexusforge.embeddings_loaded", model=settings.EMBEDDING_MODEL)
-
     # Initialize Qdrant connection (replaces ChromaDB)
     from rag.vector_store.qdrant_store import QdrantStore
     QdrantStore.get_instance()
     log.info("nexusforge.qdrant_connected", host=settings.QDRANT_HOST)
 
-    # Initialize BM42 sparse embedder
-    from rag.embeddings.sparse_embedder import SparseEmbeddingService
-    SparseEmbeddingService.get_instance()
-    log.info("nexusforge.sparse_embedder_loaded")
+    # Pre-load embedding models in background task so server binds immediately for healthcheck
+    async def _warmup_embeddings():
+        try:
+            from rag.embeddings.embedder import EmbeddingService
+            EmbeddingService.get_instance()
+            log.info("nexusforge.embeddings_loaded", model=settings.EMBEDDING_MODEL)
+
+            from rag.embeddings.sparse_embedder import SparseEmbeddingService
+            SparseEmbeddingService.get_instance()
+            log.info("nexusforge.sparse_embedder_loaded")
+        except Exception as we:
+            log.error("nexusforge.warmup_failed", error=str(we))
+
+    asyncio.create_task(_warmup_embeddings())
 
     # Start Redis PubSub Listener for WebSockets
     try:
@@ -65,7 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     from graph.neo4j_client import Neo4jClient
     try:
         neo4j_client = Neo4jClient.get_instance()
-        await neo4j_client.initialize_schema()
+        await neo4j_client.setup_schema()
         log.info("nexusforge.neo4j_connected", uri=settings.NEO4J_URI)
     except Exception as e:
         log.error("nexusforge.neo4j_connection_failed", error=str(e))
@@ -176,6 +181,7 @@ def create_app() -> FastAPI:
 
     # ─── Routers ─────────────────────────────────────────────────────────────
     app.include_router(health_router,       tags=["health"])
+    app.include_router(health_router,       prefix="/api/v1",              tags=["health"])
     app.include_router(auth_router,         prefix="/api/v1/auth",         tags=["auth"])
     app.include_router(projects_router,     prefix="/api/v1/projects",     tags=["projects"])
     app.include_router(repositories_router, prefix="/api/v1/repos",        tags=["repositories"])

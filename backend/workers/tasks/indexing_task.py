@@ -278,6 +278,39 @@ def index_repository(
             payloads=payloads,
         )
 
+        # ─── Step 5b: Build Neo4j Knowledge Graph ─────────────────
+        try:
+            import asyncio
+            from graph.repo_graph_builder import RepoGraphBuilder
+            chunk_dicts = [
+                {
+                    "content": c.content,
+                    "file_path": c.file_path,
+                    "language": c.language,
+                    "node_type": c.chunk_type,
+                    "start_line": c.start_line,
+                    "end_line": c.end_line,
+                    "metadata": {
+                        "name": c.node_name,
+                        "parent_name": c.parent_name,
+                        "file_path": c.file_path,
+                        "language": c.language,
+                        "node_type": c.chunk_type,
+                    }
+                }
+                for c in all_chunks
+            ]
+            graph_builder = RepoGraphBuilder()
+            graph_res = asyncio.run(graph_builder.build(repository_id, chunk_dicts))
+            log.info(
+                "indexing.graph_built",
+                repo_id=repository_id,
+                entities=graph_res.entities_created,
+                relationships=graph_res.relationships_created,
+            )
+        except Exception as ge:
+            log.warning("indexing.graph_build_failed", repo_id=repository_id, error=str(ge))
+
         # ─── Step 6: Update database ─────────────────────────────
         duration_ms = int((time.time() - start_time) * 1000)
 
