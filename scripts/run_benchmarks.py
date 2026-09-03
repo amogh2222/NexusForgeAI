@@ -20,18 +20,20 @@ from evaluation.benchmark_suite import BenchmarkSuite, EvaluationReport
 
 log = structlog.get_logger()
 
-async def dummy_agent_fn(prompt: str) -> str:
-    """A dummy agent function for testing the runner."""
-    from backend.core.config import settings
-    
-    if settings.OPENAI_API_KEY:
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import HumanMessage
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key=settings.OPENAI_API_KEY, temperature=0)
-        resp = await llm.ainvoke([HumanMessage(content=prompt)])
-        return resp.content if hasattr(resp, "content") else str(resp)
-    
-    return "Dummy response containing some keywords: installation, docker, injection, sequential, gather, query, cache"
+async def real_agent_fn(prompt: str) -> str:
+    """Run prompt against the NexusForge orchestrator pipeline."""
+    import uuid
+    from agents.orchestrator import get_orchestrator
+    orch = get_orchestrator()
+    state = await orch.arun(
+        project_id="00000000-0000-0000-0000-000000000000",
+        thread_id=f"cli-bench-{uuid.uuid4().hex[:8]}",
+        user_message=prompt,
+    )
+    messages = state.get("messages", [])
+    if messages:
+        return messages[-1].content
+    return str(state)
 
 
 def generate_markdown_report(report: EvaluationReport, output_file: str):
@@ -94,7 +96,7 @@ async def main():
     
     report = await suite.run(
         suite_id=suite_id,
-        agent_fn=dummy_agent_fn,
+        agent_fn=real_agent_fn,
         case_ids=args.cases
     )
     

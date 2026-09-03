@@ -1,20 +1,53 @@
+# Environment variables
 .env
 .env.local
 .env.production
+
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
+dist/
+build/
 venv/
 .venv/
-node_modules/
-.next/
+
+# Testing & Coverage
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+
+# Temporary & Scratch
+scratch/
+tmp/
 *.log
 *.sqlite3
+
+# Storage & Data volumes
 chroma_data/
 qdrant_data/
+neo4j_data/
+postgres_data/
+redis_data/
+kafka_data/
+zookeeper_data/
 uploads/
+
+# Model artifacts
 *.model
 *.bin
 *.gguf
+
+# Node / Next.js
+node_modules/
+.next/
+
+# OS and IDE
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
