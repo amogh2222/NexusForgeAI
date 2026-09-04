@@ -22,7 +22,7 @@ async def github_login(request: Request):
     if not settings.GITHUB_CLIENT_ID:
         raise HTTPException(
             status_code=400,
-            detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env, or use the Quick Demo Sign-in button.",
+            detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env.",
         )
 
     # Resolve client host dynamically
@@ -45,10 +45,17 @@ async def github_login(request: Request):
     return RedirectResponse(url)
 
 @router.get("/callback")
-async def github_callback(code: str, request: Request):
+async def github_callback(code: str, request: Request, redirect_uri: str | None = None):
     """Handle OAuth callback and exchange code for token."""
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")
+
+    # Resolve token redirect_uri
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    client_host = host.replace(":8000", ":3000") if ":8000" in host else host
+    computed_redirect_uri = f"{scheme}://{client_host}/auth/github/callback"
+    target_redirect_uri = redirect_uri or computed_redirect_uri or settings.GITHUB_REDIRECT_URI
 
     async with httpx.AsyncClient() as client:
         # Exchange code for access token
@@ -58,7 +65,7 @@ async def github_callback(code: str, request: Request):
                 "client_id": settings.GITHUB_CLIENT_ID,
                 "client_secret": settings.GITHUB_CLIENT_SECRET,
                 "code": code,
-                "redirect_uri": settings.GITHUB_REDIRECT_URI,
+                "redirect_uri": target_redirect_uri,
             },
             headers={"Accept": "application/json"}
         )

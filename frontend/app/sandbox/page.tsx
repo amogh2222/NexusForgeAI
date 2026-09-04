@@ -96,6 +96,12 @@ export default function SandboxPage() {
         <header className="min-h-[3.5rem] md:min-h-[4rem] py-2 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-4 md:px-6 justify-between z-10 shadow-xs shrink-0 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <h2 className="font-semibold text-base sm:text-lg">Execution Sandbox</h2>
+            {typeof window !== "undefined" && localStorage.getItem("nexusforge_active_repo_name") && (
+              <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                Repo: {localStorage.getItem("nexusforge_active_repo_name")}
+              </div>
+            )}
             <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium">
               Python 3.11
             </div>

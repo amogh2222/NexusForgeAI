@@ -45,6 +45,7 @@ uploads/
 # Node / Next.js
 node_modules/
 .next/
+*.tsbuildinfo
 
 # OS and IDE
 .DS_Store

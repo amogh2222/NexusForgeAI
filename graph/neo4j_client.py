@@ -93,6 +93,11 @@ class Neo4jClient:
             "CREATE CONSTRAINT function_fqn IF NOT EXISTS FOR (f:Function) REQUIRE f.fqn IS UNIQUE",
             "CREATE INDEX entity_repo IF NOT EXISTS FOR (n:Service) ON (n.repo_id)",
             "CREATE INDEX entity_file IF NOT EXISTS FOR (n:Function) ON (n.file_path)",
+            "CREATE INDEX idx_file_name IF NOT EXISTS FOR (f:File) ON (f.name)",
+            "CREATE INDEX idx_function_name IF NOT EXISTS FOR (fn:Function) ON (fn.name)",
+            "CREATE INDEX idx_class_name IF NOT EXISTS FOR (c:Class) ON (c.name)",
+            "CREATE INDEX idx_service_name IF NOT EXISTS FOR (s:Service) ON (s.name)",
+            "CREATE INDEX idx_package_name IF NOT EXISTS FOR (p:Package) ON (p.name)",
         ]
         async with self._driver.session(database=self._s.NEO4J_DATABASE) as session:
             for stmt in stmts:
@@ -143,32 +148,43 @@ class Neo4jClient:
             log.info("neo4j.entities_ingested", total=total)
             return total
 
-    async def ingest_relationships(self, relationships: list[CodeRelationship]) -> int:
-        """MERGE relationships between entities."""
+    async def ingest_relationships(self, relationships: list[CodeRelationship], batch_size: int = 200) -> int:
+        """MERGE relationships between entities in bulk UNWIND batches."""
         if not self._available or not relationships:
             return 0
 
+        by_type: dict[str, list[dict]] = {}
+        for rel in relationships:
+            by_type.setdefault(rel.rel_type, []).append({
+                "from_name": rel.from_name,
+                "to_name": rel.to_name,
+            })
+
         count = 0
         async with self._driver.session(database=self._s.NEO4J_DATABASE) as session:
-            for rel in relationships:
-                try:
-                    await session.run(
-                        f"""
-                        MATCH (a {{name: $from_name}})
-                        MATCH (b {{name: $to_name}})
-                        MERGE (a)-[r:{rel.rel_type}]->(b)
-                        SET r.updated_at = timestamp()
-                        """,
-                        from_name=rel.from_name,
-                        to_name=rel.to_name,
-                    )
-                    count += 1
-                except Exception as e:
-                    log.warning(
-                        "neo4j.rel_failed",
-                        rel=f"{rel.from_name}->{rel.to_name}",
-                        error=str(e)[:60],
-                    )
+            for rel_type, rels in by_type.items():
+                for i in range(0, len(rels), batch_size):
+                    chunk = rels[i : i + batch_size]
+                    try:
+                        result = await session.run(
+                            f"""
+                            UNWIND $batch AS item
+                            MATCH (a {{name: item.from_name}})
+                            MATCH (b {{name: item.to_name}})
+                            MERGE (a)-[r:{rel_type}]->(b)
+                            SET r.updated_at = timestamp()
+                            RETURN count(r) AS cnt
+                            """,
+                            batch=chunk,
+                        )
+                        record = await result.single()
+                        count += record["cnt"] if record else len(chunk)
+                    except Exception as e:
+                        log.warning(
+                            "neo4j.rel_batch_failed",
+                            rel_type=rel_type,
+                            error=str(e)[:80],
+                        )
 
         log.info("neo4j.relationships_ingested", count=count)
         return count

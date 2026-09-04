@@ -91,6 +91,9 @@ export const api = {
       const result = await response.json();
       setAuthToken(result.access_token);
       return result;
+    },
+    me() {
+      return fetchAPI("/auth/me");
     }
   },
   github: {

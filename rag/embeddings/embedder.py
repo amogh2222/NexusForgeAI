@@ -41,7 +41,12 @@ class EmbeddingService:
         try:
             from fastembed import TextEmbedding
             log.info("embeddings.loading_fastembed", model=model_name)
-            self.model = TextEmbedding(model_name=model_name, cache_dir="/app/.cache/fastembed")
+            self.model = TextEmbedding(
+                model_name=model_name,
+                cache_dir="/app/.cache/fastembed",
+                threads=2,
+                enable_cpu_mem_arena=False,
+            )
             self._is_fastembed = True
             log.info("embeddings.loaded_fastembed", model=model_name, dim=768)
         except Exception as fe:

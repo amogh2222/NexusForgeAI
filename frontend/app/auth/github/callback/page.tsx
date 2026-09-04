@@ -37,9 +37,13 @@ function GitHubCallbackContent() {
           ? `${proto}//${hostname}:8000/api/v1`
           : `${proto}//${window.location.host}/api/v1`;
 
-        const res = await fetch(`${apiUrl}/auth/github/callback?code=${encodeURIComponent(code)}`, {
-          headers: { Accept: "application/json" },
-        });
+        const callbackUrl = `${window.location.origin}/auth/github/callback`;
+        const res = await fetch(
+          `${apiUrl}/auth/github/callback?code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(callbackUrl)}`,
+          {
+            headers: { Accept: "application/json" },
+          }
+        );
 
         // If backend returned a redirect or token JSON
         if (res.redirected) {

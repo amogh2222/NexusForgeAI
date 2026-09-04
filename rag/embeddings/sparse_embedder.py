@@ -33,7 +33,12 @@ class SparseEmbeddingService:
         try:
             from fastembed import SparseTextEmbedding
 
-            self._model = SparseTextEmbedding(model_name=self.MODEL_NAME, cache_dir="/app/.cache/fastembed")
+            self._model = SparseTextEmbedding(
+                model_name=self.MODEL_NAME,
+                cache_dir="/app/.cache/fastembed",
+                threads=2,
+                enable_cpu_mem_arena=False,
+            )
             elapsed = (time.perf_counter() - start) * 1000
             log.info(
                 "sparse_embedder.loaded",

@@ -22,17 +22,26 @@ log = structlog.get_logger()
 SKIP_EXTENSIONS = {
     ".pyc", ".pyo", ".pyd", ".class", ".o", ".so", ".dll", ".exe",
     ".jpg", ".jpeg", ".png", ".gif", ".svg", ".ico", ".webp",
-    ".mp3", ".mp4", ".avi", ".mov", ".pdf",
-    ".lock", ".log", ".bin", ".wasm",
+    ".mp3", ".mp4", ".avi", ".mov", ".pdf", ".zip", ".tar", ".gz",
+    ".lock", ".log", ".bin", ".wasm", ".map", ".min.js", ".min.css",
+    ".woff", ".woff2", ".ttf", ".eot", ".csv", ".tsv", ".parquet",
+    ".db", ".sqlite", ".sqlite3",
 }
 
 SKIP_DIRECTORIES = {
     "node_modules", ".git", "__pycache__", ".pytest_cache", "dist",
     "build", ".next", "venv", ".venv", "env", ".env",
-    "vendor", "coverage", ".nyc_output",
+    "vendor", "coverage", ".nyc_output", ".turbo", ".yarn",
+    "target", "out", "Pods", ".gradle", ".idea", ".vscode",
+    "tmp", "temp", "site-packages", ".cache", "fixtures",
 }
 
-MAX_FILE_SIZE_BYTES = 200_000  # 200KB per file
+SKIP_FILENAMES = {
+    "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "poetry.lock",
+    "cargo.lock", "composer.lock", "gemfile.lock", ".ds_store",
+}
+
+MAX_FILE_SIZE_BYTES = 100_000  # 100KB per file
 
 
 def _publish_event(redis_client: redis.Redis, project_id: str, event: dict):
@@ -68,8 +77,7 @@ def index_repository(
     5. Update repository status in PostgreSQL
     6. Publish progress events via Redis
     """
-    import torch
-    torch.set_num_threads(4)
+    import gc
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
@@ -136,6 +144,8 @@ def index_repository(
             dirs[:] = [d for d in dirs if d not in SKIP_DIRECTORIES]
 
             for fname in files:
+                if fname.lower() in SKIP_FILENAMES:
+                    continue
                 fpath = os.path.join(root, fname)
                 ext = Path(fname).suffix.lower()
 
@@ -214,6 +224,7 @@ def index_repository(
                 log.warning("indexing.file_error", file=rel_path, error=str(e))
 
         log.info("indexing.chunking_complete", total_chunks=len(all_chunks))
+        gc.collect()
 
         # ─── Step 4: Generate embeddings ────────────────────────
         _publish_event(redis_client, project_id, {
@@ -228,7 +239,9 @@ def index_repository(
         embedder = EmbeddingService.get_instance()
 
         chunk_texts = [c.content for c in all_chunks]
-        embeddings = embedder.embed_documents(chunk_texts, batch_size=settings.EMBEDDING_BATCH_SIZE)
+        log.info("indexing.embedding_dense_start", count=len(chunk_texts))
+        embeddings = embedder.embed_documents(chunk_texts, batch_size=32)
+        gc.collect()
 
         _publish_event(redis_client, project_id, {
             "type": "indexing_progress",
@@ -250,9 +263,11 @@ def index_repository(
         ids = [c.chunk_id for c in all_chunks]
 
         # Generate sparse embeddings
+        log.info("indexing.embedding_sparse_start", count=len(chunk_texts))
         sparse_results = sparse_embedder.embed_sparse_batch(chunk_texts)
         sparse_indices = [r[0] for r in sparse_results]
         sparse_values = [r[1] for r in sparse_results]
+        log.info("indexing.embedding_sparse_complete", count=len(sparse_results))
 
         payloads = [
             {

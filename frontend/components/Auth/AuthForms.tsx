@@ -24,28 +24,6 @@ export function AuthForms() {
     window.location.href = `${apiUrl}/auth/github/login`;
   };
 
-  const handleDemoSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      try {
-        await api.auth.login({ email: "demo@nexusforge.ai", password: "password123" });
-      } catch {
-        await api.auth.register({
-          email: "demo@nexusforge.ai",
-          username: "demodev",
-          password: "password123",
-        });
-        await api.auth.login({ email: "demo@nexusforge.ai", password: "password123" });
-      }
-      window.location.href = "/";
-    } catch (err: any) {
-      setError(err.message || "Demo sign-in failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -93,15 +71,6 @@ export function AuthForms() {
           >
             <Github size={20} />
             <span>Continue with GitHub</span>
-          </button>
-
-          <button
-            onClick={handleDemoSignIn}
-            type="button"
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200 rounded-xl py-2.5 px-4 text-xs font-semibold transition-all shadow-xs"
-          >
-            <span>⚡ Quick Demo Sign-in (1-Click)</span>
           </button>
         </div>
 

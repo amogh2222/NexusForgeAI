@@ -12,10 +12,12 @@ import {
   Menu,
   X,
   LogOut,
+  GitBranch,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -29,6 +31,49 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [repositories, setRepositories] = useState<any[]>([]);
+  const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
+
+  const loadRepos = async () => {
+    try {
+      const projects = await api.projects.list();
+      if (projects && projects.length > 0) {
+        const repos = await api.repositories.list(projects[0].id);
+        setRepositories(repos || []);
+        const stored = typeof window !== "undefined" ? localStorage.getItem("nexusforge_active_repo_id") : null;
+        if (stored && repos.some((r: any) => r.id === stored)) {
+          setActiveRepoId(stored);
+        } else if (repos && repos.length > 0) {
+          setActiveRepoId(repos[0].id);
+          localStorage.setItem("nexusforge_active_repo_id", repos[0].id);
+          localStorage.setItem("nexusforge_active_repo_name", repos[0].name);
+        }
+      }
+    } catch (e) {
+      console.warn("Sidebar repo load error:", e);
+    }
+  };
+
+  useEffect(() => {
+    api.auth.me().then(setUser).catch(() => {});
+    loadRepos();
+    const handleRepoChange = () => {
+      const stored = localStorage.getItem("nexusforge_active_repo_id");
+      if (stored) setActiveRepoId(stored);
+      loadRepos();
+    };
+    window.addEventListener("nexusforge_repo_changed", handleRepoChange);
+    return () => window.removeEventListener("nexusforge_repo_changed", handleRepoChange);
+  }, []);
+
+  const handleSelectRepo = (repoId: string) => {
+    setActiveRepoId(repoId);
+    const repo = repositories.find((r) => r.id === repoId);
+    localStorage.setItem("nexusforge_active_repo_id", repoId);
+    if (repo) localStorage.setItem("nexusforge_active_repo_name", repo.name);
+    window.dispatchEvent(new Event("nexusforge_repo_changed"));
+  };
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -37,12 +82,16 @@ export function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem("nexusforge_token");
+    localStorage.removeItem("nexusforge_active_repo_id");
+    localStorage.removeItem("nexusforge_active_repo_name");
     window.location.href = "/auth";
   };
 
+  const activeRepo = repositories.find((r) => r.id === activeRepoId);
+
   const navContent = (isMobile: boolean = false) => (
     <>
-      <div className="px-6 mb-8 flex items-center justify-between">
+      <div className="px-6 mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center font-bold text-white shadow-md">
             N
@@ -58,6 +107,51 @@ export function Sidebar() {
             <X size={20} />
           </button>
         )}
+      </div>
+
+      {/* Active Workspace Repository Selector */}
+      <div className="px-4 mb-4">
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all shadow-xs">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1">
+              <GitBranch size={12} className="text-indigo-500" />
+              Active Workspace
+            </span>
+            {activeRepo && (
+              <span 
+                className={`w-2 h-2 rounded-full ${
+                  activeRepo.indexed_status === 'COMPLETED' || activeRepo.indexed_status === 'INDEXED'
+                    ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' 
+                    : 'bg-amber-500 animate-pulse'
+                }`} 
+                title={activeRepo.indexed_status}
+              />
+            )}
+          </div>
+          {repositories.length > 0 ? (
+            <div className="relative">
+              <select
+                value={activeRepoId || ""}
+                onChange={(e) => handleSelectRepo(e.target.value)}
+                className="w-full text-xs font-semibold text-slate-800 bg-transparent border-0 focus:ring-0 cursor-pointer pr-4 truncate py-0.5"
+              >
+                {repositories.map((repo) => (
+                  <option key={repo.id} value={repo.id}>
+                    {repo.name} {repo.indexed_status === 'COMPLETED' || repo.indexed_status === 'INDEXED' ? '✓' : '⟳'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <Link 
+              href="/" 
+              onClick={() => isMobile && setIsMobileOpen(false)}
+              className="text-xs text-indigo-600 hover:underline font-medium block truncate"
+            >
+              + Select repository
+            </Link>
+          )}
+        </div>
       </div>
 
       <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
@@ -116,12 +210,21 @@ export function Sidebar() {
         {/* User Profile */}
         <div className="mt-4 pt-4 border-t border-slate-200">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-              AM
-            </div>
+            {user?.avatar_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={user.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover shadow-sm shrink-0 border border-slate-200" />
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                {(user?.username || "AM").substring(0, 2).toUpperCase()}
+              </div>
+            )}
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-slate-900 leading-tight truncate">Amogh</span>
-              <span className="text-xs text-slate-500 mt-0.5 truncate">amogh2222@github</span>
+              <span className="text-sm font-semibold text-slate-900 leading-tight truncate">
+                {user?.full_name || user?.username || "Developer"}
+              </span>
+              <span className="text-xs text-slate-500 mt-0.5 truncate">
+                {user?.github_username ? `@${user.github_username}` : user?.email || "Connected"}
+              </span>
             </div>
           </div>
         </div>

@@ -44,7 +44,7 @@ celery_app.conf.update(
 
     # Worker settings
     worker_prefetch_multiplier=1,   # Fair scheduling
-    worker_max_tasks_per_child=100, # Prevent memory leaks
+    worker_max_tasks_per_child=20,  # Prevent memory leaks
 
     # Results
     result_expires=3600,

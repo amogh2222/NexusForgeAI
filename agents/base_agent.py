@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 import structlog
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from backend.core.config import settings

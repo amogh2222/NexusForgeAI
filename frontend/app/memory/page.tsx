@@ -62,8 +62,14 @@ export default function MemoryPage() {
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 pb-nav md:pb-8 relative min-w-0 bg-slate-50">
         <header className="h-14 sm:h-16 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center px-4 md:px-6 justify-between z-10 sticky top-0 shadow-xs">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <h2 className="font-semibold text-base sm:text-lg">Memory Explorer</h2>
+            {typeof window !== "undefined" && localStorage.getItem("nexusforge_active_repo_name") && (
+              <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                Repo: {localStorage.getItem("nexusforge_active_repo_name")}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-500">
             <Database size={15} />

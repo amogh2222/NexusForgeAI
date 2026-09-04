@@ -120,8 +120,14 @@ export default function ChatPage() {
           if (history && history.length > 0) setMessages(history);
           if (logs) setAgentLogs(logs);
           if (repos && repos.length > 0) {
-            // Select the most recently updated repository or the first one
-            setRepositoryId(repos[0].id);
+            const stored = localStorage.getItem("nexusforge_active_repo_id");
+            if (stored && repos.some((r: any) => r.id === stored)) {
+              setRepositoryId(stored);
+            } else {
+              setRepositoryId(repos[0].id);
+              localStorage.setItem("nexusforge_active_repo_id", repos[0].id);
+              localStorage.setItem("nexusforge_active_repo_name", repos[0].name);
+            }
           }
         }
       } catch (err) {
@@ -132,13 +138,20 @@ export default function ChatPage() {
       }
     }
     init();
+
+    const handleRepoChange = () => {
+      const stored = localStorage.getItem("nexusforge_active_repo_id");
+      if (stored) setRepositoryId(stored);
+    };
+    window.addEventListener("nexusforge_repo_changed", handleRepoChange);
+    return () => window.removeEventListener("nexusforge_repo_changed", handleRepoChange);
   }, []);
-
-
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAgentThinking]);
+
+  const activeRepoName = typeof window !== "undefined" ? localStorage.getItem("nexusforge_active_repo_name") : null;
 
   const handleSend = async () => {
     if (!input.trim() || !projectId) return;
@@ -203,6 +216,12 @@ export default function ChatPage() {
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <h2 className="font-semibold text-base sm:text-lg">Agent Workspace</h2>
             <div className="flex gap-1.5 sm:gap-2 items-center flex-wrap">
+              {activeRepoName && (
+                <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  Repo: {activeRepoName}
+                </div>
+              )}
               <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs bg-emerald-500/15 text-emerald-700 border border-emerald-500/25">
                 Active Project: {projectId ? "Connected" : "Loading..."}
               </div>
