@@ -80,6 +80,7 @@ async def websocket_project(
             elif msg_type == "chat":
                 content = message.get("content", "").strip()
                 msg_thread_id = message.get("thread_id", thread_id)
+                msg_repo_id = message.get("repository_id")
                 if content and user_id:
                     from backend.workers.tasks.agent_task import run_agent_pipeline
                     run_agent_pipeline.delay(
@@ -87,6 +88,7 @@ async def websocket_project(
                         project_id=project_id,
                         thread_id=msg_thread_id,
                         content=content,
+                        repository_id=msg_repo_id,
                     )
 
     except WebSocketDisconnect:

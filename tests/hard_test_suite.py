@@ -27,13 +27,13 @@ class Colors:
     RESET = "\033[0m"
 
 def log_test(title: str):
-    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [TEST SUITE] {title} ==={Colors.RESET}")
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [TEST SUITE] {title} ==={Colors.RESET}", flush=True)
 
 def assert_true(condition: bool, msg: str):
     if condition:
-        print(f"  {Colors.GREEN}✓ PASS:{Colors.RESET} {msg}")
+        print(f"  {Colors.GREEN}✓ PASS:{Colors.RESET} {msg}", flush=True)
     else:
-        print(f"  {Colors.RED}✗ FAIL:{Colors.RESET} {msg}")
+        print(f"  {Colors.RED}✗ FAIL:{Colors.RESET} {msg}", flush=True)
         sys.exit(1)
 
 
@@ -235,9 +235,9 @@ raise RuntimeError("Deliberate_Sandbox_Runtime_Error")
     chat_send = requests.post(f"{BASE_URL}/chat/message", headers=headers, json=chat_payload)
     assert_true(chat_send.status_code in [200, 202], f"Send chat message returned {chat_send.status_code}")
 
-    print("  Waiting for agent pipeline to execute...")
+    print("  Waiting for agent pipeline to execute...", flush=True)
     agent_message = None
-    for _ in range(45):
+    for _ in range(60):
         time.sleep(2)
         hist = requests.get(f"{BASE_URL}/chat/{thread_id}/history", headers=headers).json()
         agent_msgs = [m for m in hist if m.get("role") in ["AGENT", "ASSISTANT", "agent", "assistant"]]

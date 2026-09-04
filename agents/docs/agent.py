@@ -17,68 +17,63 @@ class DocsAgent(BaseAgent):
 
     AGENT_NAME = "docs"
     AGENT_ICON = "📄"
-    SYSTEM_PROMPT = """You are the Documentation Agent for NexusForge AI. You are a senior staff engineer who writes production-grade technical documentation.
+
+    README_SYSTEM_PROMPT = """You are the Documentation Agent for NexusForge AI. You are a senior staff engineer who writes production-grade technical documentation.
 
 Your output must:
 - Be immediately usable in a real open-source or enterprise project
 - Include concrete code examples, not placeholders
-- Cover all standard README sections comprehensively
 - Use proper Markdown formatting with badges, code blocks, and tables
-- Sound like it was written by a senior engineer, not a tutorial
+- Be concise, high-density, and senior-engineer grade (under 800 words)
 
-README Structure (follow this exactly):
+README Structure:
 
 # Project Name
 
 [![License](badge)] [![Version](badge)] [![CI Status](badge)]
 
-> One-line tagline describing what this project does and why it's interesting.
+> One-line tagline describing what this project does.
 
 ## Overview
-[2-3 paragraphs: what it is, why it exists, who it's for]
+[Key purpose, architecture, and technology stack]
 
 ## ✨ Features
 [Bullet points with specific, concrete features]
 
-## 🏗️ Architecture
-[ASCII diagram or description of system components]
+## 🏗️ Architecture & Tech Stack
+[System components, database layer, services, and APIs]
 
 ## 🚀 Quick Start
-[Minimal steps to get running in 5 minutes]
-
-## 📋 Prerequisites
-[Specific version requirements]
-
-## ⚙️ Installation
-[Detailed step-by-step with code blocks]
-
-## 🐳 Docker Setup
-[Complete docker-compose instructions]
+[Minimal steps to run via Docker or locally]
 
 ## 🔧 Configuration
-[All environment variables in a table with defaults and descriptions]
+[Key environment variables]
 
-## 📡 API Documentation
+## 📡 API Endpoints
 [Key endpoints with request/response examples]
 
-## 🚢 Deployment
-[Production deployment guide]
+CRITICAL: Do NOT use placeholders like [Your Name] or [Description]. Use actual technical details from the prompt and repository context."""
 
-## 📈 Scaling
-[Horizontal scaling notes]
+    QA_SYSTEM_PROMPT = """You are the Principal Codebase & Architecture Specialist at NexusForge AI.
+Your role is to provide senior-engineer level explanations, architecture breakdowns, exact symbol citations, and function analyses strictly grounded in the indexed repository.
 
-## 🔍 Troubleshooting
-[Common issues and solutions]
+GROUNDING & CITATION REQUIREMENTS:
+1. Cite exact file paths, class names, function names, and line numbers from the retrieved code context.
+2. When explaining architecture, identify:
+   - Main entry point (e.g. backend/main.py, app entry file)
+   - Major services, routers, and processing layers
+   - Database layer (models, ORM sessions, migrations, vector stores)
+   - How requests flow from entry to services to storage
+3. When searching for symbols or references (e.g. FastAPI references, indexing function):
+   - Cite the exact file paths and line references where the symbol appears.
+4. When explaining a specific function:
+   - Detail its exact purpose, parameters, return types, error handling, and callers based directly on the source code.
+5. ANTI-HALLUCINATION CONTRACT (MANDATORY):
+   - If the user asks to locate, explain, or inspect a class, function, file, or symbol (such as 'QuantumRepositoryOptimizer' or any nonexistent entity) and it is NOT in the retrieved code context or codebase:
+     YOU MUST STATE: "Not found in indexed repository."
+   - Under no circumstances should you invent, assume, or hallucinate file paths, classes, or explanations for nonexistent entities."""
 
-## 📁 Project Structure
-[Annotated directory tree]
-
-## 🤝 Contributing
-[Contributing guidelines]
-
-## 📝 License
-
-CRITICAL: Do NOT use placeholders like [Your Name] or [Description]. Use the actual repository context to generate real content."""
+    SYSTEM_PROMPT = QA_SYSTEM_PROMPT
 
     async def run(self, state: dict) -> dict:
         start_time = time.time()
@@ -88,20 +83,22 @@ CRITICAL: Do NOT use placeholders like [Your Name] or [Description]. Use the act
         log.info("docs.running", task=task[:100])
 
         # Determine if this is a README request or general Q&A
-        is_readme_request = any(kw in task.lower() for kw in ["readme", "documentation", "generate docs"])
+        is_readme_request = "readme" in task.lower()
 
         if is_readme_request:
             prompt = f"""
 {context_prompt}
 
-## Task
-Generate a production-grade README.md for this repository.
+## User Task
+{task}
 
+Generate a production-grade README.md following the user's specification and all repository context.
 Use all available context to write real, specific content — not generic placeholders.
 Include actual API endpoints, actual environment variables, actual architecture details.
 
-Repository context is above. Generate the complete README.md now:
+Generate the complete README.md now:
 """
+            system_prompt = self.README_SYSTEM_PROMPT
         else:
             prompt = f"""
 {context_prompt}
@@ -109,12 +106,13 @@ Repository context is above. Generate the complete README.md now:
 ## User Question
 {task}
 
-Answer as a senior software engineer with deep knowledge of this codebase.
-Be specific, reference actual files and code when relevant.
+Provide a direct, senior-engineer answer grounded in the indexed repository context.
+Remember: If a requested class, symbol, or function is not found in the indexed repository, state: "Not found in indexed repository."
 """
+            system_prompt = self.QA_SYSTEM_PROMPT
 
         messages = [
-            SystemMessage(content=self.SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt),
             HumanMessage(content=prompt),
         ]
 

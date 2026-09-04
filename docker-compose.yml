@@ -147,7 +147,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: nexusforge_celery
     restart: unless-stopped
-    command: celery -A backend.workers.celery_app worker -Q celery,indexing,agents,execution --loglevel=info --concurrency=1 -Ofair
+    command: celery -A backend.workers.celery_app worker -Q celery,indexing,agents,execution --loglevel=info --concurrency=2 -Ofair
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nexusforge}:${POSTGRES_PASSWORD:-nexusforge_secret}@postgres:5432/${POSTGRES_DB:-nexusforge}

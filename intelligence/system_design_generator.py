@@ -173,8 +173,8 @@ class SystemDesignGenerator:
             mermaid = mermaid[:-3]
         mermaid = mermaid.strip()
 
-        # Validate that the diagram has actual graph connections
-        if not mermaid or "-->" not in mermaid or len(mermaid) < 30:
+        # Validate that the diagram has actual graph connections and reflects target scale
+        if not mermaid or "-->" not in mermaid or len(mermaid) < 30 or (preset["users"] not in mermaid and "CloudFront" not in mermaid and "Aurora" not in mermaid):
             mermaid = self._generate_mermaid(context, preset)
         elif not any(mermaid.startswith(kw) for kw in ["graph", "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram"]):
             mermaid = "graph TB\n" + mermaid

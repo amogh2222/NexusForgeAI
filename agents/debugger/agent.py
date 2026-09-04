@@ -105,6 +105,17 @@ Analyze this failure, identify the root cause, and provide a complete fix.
                      confidence=report.confidence,
                      duration_ms=duration_ms)
 
+            # Strip markdown fences if LLM included them in the code field
+            if report.fixed_code:
+                fixed = report.fixed_code.strip()
+                if fixed.startswith("```"):
+                    lines = fixed.splitlines()
+                    if lines and lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
+                    report.fixed_code = "\n".join(lines).strip()
+
             code_section = f"\n### Fixed Code\n```python\n{report.fixed_code}\n```\n" if report.fixed_code else ""
             summary_msg = f"""## Debug Analysis
 

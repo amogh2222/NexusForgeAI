@@ -209,44 +209,88 @@ class NexusOrchestrator:
 
     async def _retrieve_context_node(self, state: NexusState) -> dict:
         """RAG retrieval: find relevant code context for the current task."""
-        if not state.get("repository_id"):
-            return {"retrieved_context": "", "context_sources": []}
+        project_id = state.get("project_id")
+        repo_id = state.get("repository_id")
+
+        # If repository_id is not explicitly provided, attempt to auto-resolve from the database
+        if not repo_id and project_id:
+            try:
+                import uuid as uuid_mod
+                from sqlalchemy import select
+                from backend.core.database import AsyncSessionLocal
+                from backend.models import Repository, IndexingStatus
+
+                async with AsyncSessionLocal() as session:
+                    stmt = (
+                        select(Repository)
+                        .where(
+                            Repository.project_id == uuid_mod.UUID(str(project_id)),
+                            Repository.indexed_status == IndexingStatus.INDEXED,
+                        )
+                        .order_by(Repository.updated_at.desc())
+                        .limit(1)
+                    )
+                    res = await session.execute(stmt)
+                    active_repo = res.scalar_one_or_none()
+                    if active_repo:
+                        repo_id = str(active_repo.id)
+            except Exception as e:
+                log.warning("orchestrator.auto_resolve_repo_failed", error=str(e))
+
+        if not repo_id:
+            return {"retrieved_context": "", "context_sources": [], "repository_id": repo_id}
 
         try:
             from rag.retrieval.retriever import HybridRetriever
             retriever = HybridRetriever()
             context, sources = await retriever.retrieve(
                 query=state["current_task"],
-                project_id=state["project_id"],
+                project_id=project_id,
             )
             return {
                 "retrieved_context": context,
                 "context_sources": sources,
+                "repository_id": repo_id,
             }
         except Exception as e:
             log.warning("orchestrator.retrieval_failed", error=str(e))
-            return {"retrieved_context": "", "context_sources": []}
+            return {"retrieved_context": "", "context_sources": [], "repository_id": repo_id}
 
     async def _supervisor_node(self, state: NexusState) -> dict:
         """Classify the task and determine which agent should handle it."""
         task = state["current_task"].lower()
 
-        # Specific domain tasks MUST be checked before generic verbs (generate, write, create)
-        if any(kw in task for kw in ["system design", "hld", "scale to", "architect", "architecture", "cqrs", "url shortener", "design a"]):
+        # Check if the user is querying, looking up, or asking to explain existing codebase/architecture
+        is_repo_qa = any(kw in task for kw in [
+            "where is", "find ", "find every", "what does", "explain the architecture",
+            "explain how", "explain what", "how does", "how is", "tell me", "identify the",
+            "locate", "search for", "reference to", "references to", "architecture of this",
+            "architecture of the", "how requests flow", "main entry point", "what is the implementation"
+        ])
+
+        # Greenfield system design: exclusively for designing brand-new architectures from scratch
+        is_greenfield_sysdesign = (
+            any(kw in task for kw in ["system design for", "scale to 1", "scale to 10", "scale to 100", "cqrs", "url shortener", "design a "])
+            and not any(kw in task for kw in ["this repository", "this codebase", "indexed repository", "the codebase", "the repository", "this project"])
+        )
+
+        if is_greenfield_sysdesign:
             task_type = "sysdesign"
-        elif any(kw in task for kw in ["readme", "documentation", "generate docs", "document"]):
+        elif "readme" in task:
             task_type = "readme"
-        elif any(kw in task for kw in ["review", "audit", "check code", "code review", "security audit"]):
+        elif is_repo_qa:
+            task_type = "chat"  # Handled by DocsAgent with full RAG context and anti-hallucination
+        elif any(kw in task for kw in ["review", "audit", "security problem", "code review", "security audit", "engineering issues"]):
             task_type = "review"
         elif any(kw in task for kw in ["dockerfile", "docker-compose", "deploy", "kubernetes", "ci/cd", "pipeline", "infra"]):
             task_type = "infra"
-        elif any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash", "vulnerability", "bug"]):
+        elif any(kw in task for kw in ["debug", "error", "fix", "traceback", "exception", "crash", "vulnerability", "bug", "reproducible bug"]):
             task_type = "debug"
         elif any(kw in task for kw in ["history", "evolution", "time machine", "drift", "commits"]):
             task_type = "time_machine"
         elif any(kw in task for kw in ["pull request", "issue", "kubernetes pod"]):
             task_type = "plugin"
-        elif any(kw in task for kw in ["generate", "write", "implement", "create", "code", "function", "class", "script"]):
+        elif any(kw in task for kw in ["generate", "write", "implement new", "create new", "add a new", "scaffold"]):
             task_type = "codegen"
         else:
             task_type = "chat"
@@ -376,6 +420,9 @@ class NexusOrchestrator:
                     loc = iss.get('location', '')
                     loc_str = f" (`{loc}`)" if loc else ""
                     rev_parts.append(f"- **[{sev}]** {cat}{loc_str}: {desc}")
+                    snippet = iss.get('code_snippet', '')
+                    if snippet:
+                        rev_parts.append(f"  *Evidence*: `{snippet}`")
                     if sug:
                         rev_parts.append(f"  *Fix Suggestion*: {sug}")
             recs = rev.get("recommendations", [])

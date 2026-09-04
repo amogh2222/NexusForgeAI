@@ -51,8 +51,10 @@ class BaseAgent(ABC):
                 timeout=settings.OLLAMA_TIMEOUT,
                 streaming=True,  # REQUIRED for token streaming
             )
-            # Verify connection
-            llm.invoke("ping")
+            import httpx
+            resp = httpx.get(f"{settings.OLLAMA_BASE_URL}/api/tags", timeout=3.0)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Ollama ping failed with status {resp.status_code}")
             self._llm = llm
             log.info("agent.llm_connected", agent=self.AGENT_NAME, provider="ollama", model=settings.OLLAMA_MODEL)
             return self._llm
@@ -89,26 +91,49 @@ class BaseAgent(ABC):
         )
 
     def _build_context_prompt(self, state: dict) -> str:
-        """Build the context section of the prompt from RAG results."""
+        """Build the context section of the prompt from RAG results with anti-hallucination enforcement."""
         context = state.get("retrieved_context", "")
         sources = state.get("context_sources", [])
+        task = (state.get("current_task") or "").lower()
+
+        # Generative tasks (README, codegen, scaffolding) should synthesize new artifacts and not be blocked
+        is_generative = any(kw in task for kw in ["readme", "generate", "create", "scaffold", "implement new", "write a"])
 
         if not context:
+            if state.get("repository_id") and not is_generative:
+                return """
+## Retrieved Code Context
+No matching code or symbols were found in the indexed repository for this query.
+
+CRITICAL DIRECTIVE:
+If the user asks to find, locate, explain, or inspect a specific symbol, class, function, or file that is not in the indexed repository, you MUST respond:
+"Not found in indexed repository."
+Do NOT fabricate or invent code, file paths, or explanations for nonexistent repository entities.
+---
+"""
             return ""
 
         sources_str = "\n".join(f"  - {s}" for s in sources[:10]) if sources else "  - (no source info)"
+        anti_hallucination_clause = ""
+        if not is_generative:
+            anti_hallucination_clause = """
+CRITICAL ANTI-HALLUCINATION & CITATION RULES:
+1. Ground your answers strictly in the retrieved repository code context above. Cite exact file paths, line numbers, and function/class names from these sources.
+2. If the user asks to locate, explain, or review a specific symbol, class, function, or file (such as 'QuantumRepositoryOptimizer' or any nonexistent component) and it does NOT appear in the retrieved context or codebase:
+   YOU MUST EXPLICITLY RESPOND:
+   "Not found in indexed repository."
+3. Do NOT invent, assume, or fabricate any file names, function signatures, or implementations.
+"""
         return f"""
 ## Retrieved Code Context
 
-The following code was retrieved from the repository as relevant context:
+The following code was retrieved from the indexed repository as relevant context:
 
-```
-{context[:4000]}
-```
+{context}
 
 Sources:
 {sources_str}
-
+{anti_hallucination_clause}
 ---
 """
 

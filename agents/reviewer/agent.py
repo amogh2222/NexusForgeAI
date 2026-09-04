@@ -52,10 +52,11 @@ CRITICAL REVIEW RULES (STRICT COMPLIANCE REQUIRED):
 3. ORM & SQL INJECTION STANDARDS:
    - When code uses an ORM (SQLAlchemy, Django ORM, Prisma, Tortoise) or parameterized queries, input binding is handled automatically by the ORM.
    - Do NOT falsely claim SQL injection on standard ORM calls. Only flag SQL injection if you see raw unescaped string interpolation (e.g., f"SELECT ... {var}" or "SELECT ... " + var).
-4. QUALITY OVER QUANTITY:
-   - Report only 2 to 5 genuine, verified, high-impact issues.
-   - If the code is well-structured and safe, assign an appropriate score (85-98) and report zero or one minor informational observation.
-   - NEVER invent issues or copy-paste identical template items.
+5. SOURCE SUBSTANTIATION & EXACT FILE/LINE CITATIONS (MANDATORY):
+   - Every reported issue MUST be substantiated directly from the indexed source code provided in the prompt.
+   - You MUST provide the exact file path and line reference or function name in `location`.
+   - Include the exact relevant code snippet in `code_snippet` and concrete remediation in `suggestion`.
+   - Never invent vulnerabilities or files. If the code adheres to security standards, report genuine architectural observations or affirm security compliance.
 
 Format your response as a structured JSON review report.
 """
@@ -147,6 +148,15 @@ Perform a rigorous, professional code review. Be specific, distinct, and accurat
                 duration_ms=duration_ms,
             )
 
+            formatted_issues = []
+            for i in report.issues[:10]:
+                loc_str = f" (`{i.location}`)" if i.location else ""
+                snippet_str = f"\n  *Evidence*: `{i.code_snippet}`" if i.code_snippet else ""
+                sugg_str = f"\n  *Fix*: {i.suggestion}" if i.suggestion else ""
+                formatted_issues.append(f"- **[{i.severity.upper()}]** {i.category}{loc_str}: {i.description}{snippet_str}{sugg_str}")
+
+            issues_text = "\n".join(formatted_issues) if formatted_issues else "- No critical vulnerabilities found. Code follows standard security conventions."
+
             summary_msg = f"""## Code Review Results
 
 **Score**: {report.overall_score}/100
@@ -154,7 +164,7 @@ Perform a rigorous, professional code review. Be specific, distinct, and accurat
 {report.summary}
 
 ### Issues Found ({len(report.issues)} total)
-{"".join(f"- **[{i.severity.upper()}]** {i.category}: {i.description}" + chr(10) for i in report.issues[:10]) if report.issues else "- No critical vulnerabilities found. Code follows standard conventions."}
+{issues_text}
 
 ### Recommendations
 {"".join(f"- {r}" + chr(10) for r in report.recommendations[:5]) if report.recommendations else "- Continue following clean code and testing best practices."}
